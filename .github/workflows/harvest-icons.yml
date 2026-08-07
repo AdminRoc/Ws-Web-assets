@@ -1,0 +1,44 @@
+name: 每日抓取物品图标
+
+# 资产公库（Ws-Web-assets）：从 wiki.warframe.com 每日全量抓取物品缩略图，
+# 供 item 独立站等子项目经 jsDelivr 直接引用（warframe.market 图片源已被
+# hotlink 保护封锁，wiki 为可用替代源）。
+# 抓取逻辑：.github/scripts/harvest_icons.py
+#   - 物品清单来自 Ws-Web 公库 wm-items.json + drops-index.json（公开仓库直拉）
+#   - 缺失文件增量下载，已有文件跳过（不churn git 历史）
+#   - 输出 icons/<物品名>.<ext> + manifest.json（en 名 -> 相对路径映射）
+# 触发：每日定时（UTC 02:37 ≈ 北京时间 10:37）+ 手动 Run workflow
+on:
+  schedule:
+    - cron: '37 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: assets-icons
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout 资产库
+        uses: actions/checkout@v5
+
+      - name: 全量抓取图标（wiki 源，缺失增量下载）
+        run: python3 .github/scripts/harvest_icons.py
+
+      - name: 提交并推送（只提交图标与 manifest，无变化时跳过）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add icons manifest.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "$(date -u +%Y-%m-%d): icons 同步"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2; exit 1

@@ -42,9 +42,12 @@ fetch('https://cdn.jsdelivr.net/gh/AdminRoc/Ws-Web-assets@main/manifest.json')
 
 `.github/workflows/harvest-icons.yml`（UTC 02:37）+ 手动 Run：
 
-- `.github/scripts/harvest_icons.py`：读 Ws-Web 公库 `wm-items.json`/`drops-index.json`（公开 raw 直拉）→ 只补 **WM 无图标（unknown.png）** 与 **掉落专属** 物品的 wiki 图标 → 与现有 manifest 合并 → 增量下载缺失文件 → 有变化才提交
-- 幂等：文件存在即跳过；不 churn git 历史
-- 新物品命名：wiki 页名 `safe_file()` 规则（同"命名规范"，空格转 `_`）——与 manifest 键（原 en）分离
+- `.github/scripts/harvest_icons.py`：读 Ws-Web 公库 `wm-items.json`/`drops-index.json`（公开 raw 直拉）→ 只补 **WM 无图标（unknown.png）** 与 **掉落专属** 物品的 wiki 图标（600px）→ 与现有 manifest 合并 → 增量下载缺失文件 → 有变化才提交
+- 幂等与冲突防护（重要）：
+  - 文件存在即跳过；**已有 manifest 条目绝不覆盖**（不降级既有高清资产）
+  - 新条目命名 = **en 规范化 `safe_file(en)`**（与既有 manifest 一致，非 wiki 页名）
+  - **大小写不敏感冲突消解**：新 en 与既有文件名仅大小写不同（同物品拼写变体，如 `Zid-An Asheir` vs `Zid-an_Asheir`）→ 复用既有文件路径，不产生重复/覆盖
+  - 每次改动后跑完整性校验 + `git diff manifest.json` 确认无意外覆盖
 
 ## 质量升级（一次性/按需）
 

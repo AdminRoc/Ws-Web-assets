@@ -85,7 +85,7 @@ def batch_pageimages(titles):
         chunk = titles[i:i + 50]
         q = urllib.parse.quote("|".join(chunk))
         url = (API + "?action=query&titles=" + q +
-               "&prop=pageimages&format=json&pithumbsize=300&redirects=1")
+               "&prop=pageimages&format=json&pithumbsize=600&redirects=1")
         try:
             data = http_get_json(url)
         except Exception as e:
@@ -173,7 +173,7 @@ def main():
             try:
                 d = http_get_json(API + "?action=query&titles=" +
                                   urllib.parse.quote(cand) +
-                                  "&prop=pageimages&format=json&pithumbsize=300&redirects=1")
+                                  "&prop=pageimages&format=json&pithumbsize=600&redirects=1")
                 for _, p in d.get("query", {}).get("pages", {}).items():
                     th = (p.get("thumbnail") or {}).get("source")
                     if th:
@@ -208,17 +208,34 @@ def main():
     jobs = []
     for norm_t, url in thumbs.items():
         en = norm_map[norm_t]
+        # 已有条目且文件在 → 跳过（不覆盖、不降级既有高清资产）
+        if en in existing and os.path.exists(os.path.join(OUT_DIR, os.path.basename(existing[en]))):
+            continue
         ext = os.path.splitext(url.split("?")[0])[1] or ".png"
-        fname = safe_file(norm_t) + ext
-        jobs.append((en, url, os.path.join(OUT_DIR, fname), "icons/" + fname))
+        # 命名与 manifest 规范一致：en 规范化（非 wiki 页名），保证每日增量零冲突
+        fname = safe_file(en) + ext
+        dest = os.path.join(OUT_DIR, fname)
+        # 大小写不敏感冲突消解（同物品不同拼写，如 Zid-An Asheir vs Zid-an_Asheir）：
+        # 复用现有文件路径，避免 Windows 覆盖 / manifest 指向重复文件
+        reused = None
+        if not os.path.exists(dest):
+            low = fname.lower()
+            for fn in os.listdir(OUT_DIR):
+                if fn.lower() == low and fn != fname:
+                    reused = fn
+                    break
+        if reused:
+            jobs.append((en, None, None, "icons/" + reused))
+            continue
+        jobs.append((en, url, dest, "icons/" + fname))
 
     with ThreadPoolExecutor(max_workers=8) as ex:
-        futs = [ex.submit(dl, url, dest) for _, url, dest, _ in jobs]
+        futs = [ex.submit(dl, url, dest) for _, url, dest, _ in jobs if url is not None]
         for i, fut in enumerate(as_completed(futs), 1):
             if fut.result():
                 new_files += 1
             if i % 100 == 0:
-                print("download progress:", i, "/", len(jobs), "| new:", new_files, flush=True)
+                print("download progress:", i, "/", len(futs), "| new:", new_files, flush=True)
 
     for en, _, _, rel in jobs:
         manifest[en] = rel

@@ -1,0 +1,59 @@
+name: 收割 WM 可交易物品中文译名
+
+# 每日从交易市场 v2 API 拉取 EN→ZH 映射，
+# 合并进 data/item/item-i18n-harvest.json（条目优先覆盖同名 key）。
+# 脚本在私库，与其他 harvest-* 约定一致。
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 1 * * *'   # 每天 01:15 UTC（WM 译名周级变化，每日一次足够；2026-08-07 从每日 4 次降频）
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          fetch-depth: 1
+
+      - name: 拉取私库(收割脚本)
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树(不会被提交回公库)
+        run: |
+          mkdir -p .github/scripts
+          cp _private/.github/scripts/harvest_wm_items_i18n.py .github/scripts/
+          rm -rf _private
+
+      - name: 收割 WM 物品中文译名
+        run: python3 .github/scripts/harvest_wm_items_i18n.py
+
+      - name: 提交并推送(无变化时跳过)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/item/item-i18n-harvest.json
+          git diff --staged --quiet && { echo "无实质变动，跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次)，拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1

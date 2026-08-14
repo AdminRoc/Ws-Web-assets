@@ -1,0 +1,84 @@
+name: 构建仲裁分节点效率基准数据
+
+# 为 EE.log 分析页(log/analyzer.html)的仲裁子模块生成"分节点生息效率基准"：
+#   data/arbitration-metrics/arb-node-baseline.json —— 每个节点(SolNodeXXX) 的历史最高生息速率/时，
+#                                   用于替代单一固定基准(1000/时)，让评分对不同
+#                                   节点的天然产出节奏更公平；fetch 升级通道使用。
+#   data/arbitration-metrics/arb-node-baseline.js   —— 同一份数据的内嵌种子形态(window.WF.ARB_NODE_BASELINE_DATA)，
+#                                   供 <script src>/importScripts 同步加载，file:// 下可用。
+# 数据只包含 {nodeId, nodeName, missionType, perHour}，不采集/不落盘任何玩家名、
+# 队伍名单、账号 ID 等个人信息——源站排行榜虽然公开可读，但那些字段与我们的
+# 用途(校准一个统计基准)无关。
+# 抓取脚本在私库；运行前 checkout 私库覆盖进工作树，
+# 只把产物(1 个 json + 1 个同源 .js 内嵌种子)提交回公库，私库脚本绝不提交回公库。
+# 每次运行都完整重新生成整份 nodes 表（不是增量合并），避免源站记录被刷新后
+# 我们这边残留旧基准。
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 1 * * *'   # 每天 01:15 UTC（2026-08-07 从每日 3 次降频：基准数据日级变化，1 次足够，省构建配额）
+
+concurrency:
+  group: ws-web-batch-lock   # 与其它低频批处理任务共用一把锁，避免同时写 data/ 冲突
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库(抓取脚本)
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树(不会被提交回公库)
+        run: |
+          mkdir -p .github/scripts
+          cp -a _private/.github/scripts/. .github/scripts/
+          rm -rf _private
+
+      - name: 构建分节点效率基准数据
+        run: python3 .github/scripts/build_arb_baseline.py
+
+      - name: 提交并推送(只提交产物,无变化时跳过)
+        id: commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/arbitration-metrics/arb-node-baseline.json data/arbitration-metrics/arb-node-baseline.js
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          git commit -m "2026-07-08"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "推送成功(第 $i 次)"
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1
+
+      - name: 刷新腾讯云 CDN 缓存(让刚更新的数据立刻生效,不等缓存自然过期)
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+        run: |
+          pip install --quiet tencentcloud-sdk-python
+          python3 .github/scripts/purge_tencent_cdn.py \
+            "https://wfspeed.run/data/arbitration-metrics/arb-node-baseline.json" \
+            "https://wfspeed.run/data/arbitration-metrics/arb-node-baseline.js"

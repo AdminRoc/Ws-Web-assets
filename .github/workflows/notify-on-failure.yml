@@ -1,0 +1,58 @@
+name: 定时任务失败通知
+
+# 周期性的数据刷新工作流(物品库/缩略图/汉化/拼音表)若某次定时运行失败，过去只能
+# 自己去 Actions 页面翻才发现，容易"悄悄挂掉"。本工作流用 workflow_run 监听这些
+# 工作流的完成事件，一旦 conclusion=failure，就开/更一个带 ci-failure 标签的 Issue
+# (GitHub 会按仓库通知设置把新 Issue/评论邮件给所有者)——零外部依赖、不新增任何密钥。
+#
+# 只监听"每日/每周"这类低频刷新流；高频心跳流(世界状态周期/辅助源镜像，每几分钟一次)
+# 故意不纳入：它们失败只是数据稍微变旧、几分钟后自动重试，纳入只会把 Issue 刷爆。
+on:
+  workflow_run:
+    workflows:
+      - 构建物品检索数据(物品库+掉落反查)
+      - 实际下载缓存物品缩略图进仓库(多来源)
+      - 收割掉落表物品中文译名
+      - 生成拼音检索表
+      - 补齐物品检索缺失缩略图
+    types: [completed]
+
+permissions:
+  issues: write
+
+jobs:
+  notify:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 开/更失败 Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const title = `⚠️ 定时任务失败：${run.name}`;
+            const body =
+              `工作流 **${run.name}** 的一次定时运行失败了。\n\n` +
+              `- 运行链接：${run.html_url}\n` +
+              `- 触发方式：${run.event}\n` +
+              `- 分支：${run.head_branch}\n` +
+              `- 提交：${run.head_sha}\n` +
+              `- 时间：${run.updated_at}\n\n` +
+              `请查看运行日志定位原因；修复后可在 Actions 页面手动 Re-run，确认通过后关闭本 Issue。`;
+            // 同名 open issue 已存在则追加评论，否则新建——避免每次失败都堆一个新 Issue。
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'ci-failure', per_page: 100,
+            });
+            const hit = existing.data.find(i => i.title === title);
+            if (hit) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: hit.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['ci-failure'],
+              });
+            }

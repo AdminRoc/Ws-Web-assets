@@ -1,0 +1,62 @@
+name: 实际下载缓存物品缩略图进仓库(多来源)
+
+# 改为实际把图片文件下载进本仓库 data/icons/<source>/...，原因见
+# cache_item_icons.py 头部注释：热链稳定性/CDN缓存收益/多页面复用三点。
+# 索引文件 data/item/icon-index.json: { 物品名: {path, source} }，item.html 优先用它，
+# 没有命中的条目仍回退到 wiki-icon-harvest.json 远程热链或边缘代理。
+#
+# 下载脚本在私库(.github/scripts 整体 gitignore，与
+# harvest-calamity-i18n.yml / harvest-wiki-icons.yml 同一约定)；运行前 checkout
+# 私库覆盖进工作树，只把下载到的图片文件 + 索引文件提交回公库，私库脚本绝不提交回公库。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 4 * * 1'   # 每周一，错开 wm-items/drops-index/wiki-icon-harvest 各自的刷新时间点
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  cache:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库(下载脚本)
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树(不会被提交回公库)
+        run: |
+          mkdir -p .github/scripts
+          cp -a _private/.github/scripts/cache_item_icons.py .github/scripts/
+          rm -rf _private
+
+      - name: 下载/补全缺失的缩略图缓存(已存在文件自动跳过，增量执行)
+        run: python3 .github/scripts/cache_item_icons.py
+
+      - name: 提交并推送(只提交图片+索引文件，无变化时跳过)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/icons data/item/icon-index.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1

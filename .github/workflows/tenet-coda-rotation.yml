@@ -1,0 +1,63 @@
+name: 信条/终幕武器轮换校准
+
+# 信条(Tenet)/终幕(Coda)武器每次轮换的元素+加成百分比是游戏内随机生成的，没有任何
+# 官方/社区API能查询，只能靠社区在协作表格上记录实测结果。该服务在中国
+# 大陆不稳定，不能让用户浏览器直连，所以改为本工作流定时在服务器上抓取一次，
+# 写入 data/tenet-coda-rotation.json，worldstate.html 读取这份同源文件。
+#
+# 抓取脚本已迁私库：运行前 checkout 私库覆盖
+# 进工作树；产物 json 提交回公库，私库脚本绝不提交回公库。
+on:
+  schedule:
+    # 每日 06:17 UTC 刷新信条/终幕武器轮换（原由 Cloudflare cron 每 4 小时触发，2026-08-07
+    # 迁移回 GitHub schedule 并降频为每日；轮换数据低频，world 独立站经 CDN 引用该产物）
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库（后端脚本）
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树（不会被提交回公库）
+        run: |
+          mkdir -p .github/scripts
+          cp -a _private/.github/scripts/. .github/scripts/
+          rm -rf _private
+
+      - name: 抓取信条/终幕轮换数据
+        run: python3 .github/scripts/fetch_tenet_coda.py
+
+      - name: 提交并推送（只提交产物，无变化时跳过）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/tenet-coda-rotation.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          # 跨工作流并发推送同一 main 会撞车(non-fast-forward),fetch+rebase+重试自愈
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2; exit 1

@@ -1,0 +1,65 @@
+name: 挖掘官方本地化汉化候选词(人工review用,非自动生效)
+
+# worldstate.html 等页面在国际服模式下，部分任务类型/星球/阵营/集团/节点名称没有
+# 覆盖到 data/wf-translations.json，目前要么显示英文原文，要么靠从公开世界状态接口
+# en/zh 双语快照里 diff 出来的候选(harvest_aux_i18n.py)。
+# 本workflow手动触发一次，直接从游戏官方本地化数据的逐版本镜像
+# （dict.en.json/dict.zh.json + ExportMissionTypes/
+# ExportFactions/ExportSyndicates/ExportRegions）反查候选中文译名，准确度高于diff候选，
+# 写出 data/calamity-i18n-harvest.json 供人工 review。
+#
+# 注意：本workflow只产出候选文件，绝不自动把候选词写进正式汉化库——候选词须先经人工确认
+# (尤其确认是简体中文、不是机翻/繁体)才能手动搬进私库 data/wf-translations.json 对应分类。
+# 抓取/比对脚本在私库；运行前 checkout 私库覆盖进工作树，
+# 只把候选文件提交回公库，私库脚本绝不提交回公库。
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库(挖掘脚本+既有汉化源)
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本与源进工作树(不会被提交回公库)
+        run: |
+          mkdir -p .github/scripts data
+          cp -a _private/.github/scripts/. .github/scripts/
+          cp -a _private/data/. data/
+          rm -rf _private
+
+      - name: 挖掘候选译名
+        run: python3 .github/scripts/harvest_calamity_i18n.py
+
+      - name: 提交并推送(只提交候选文件,无变化时跳过)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/calamity-i18n-harvest.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1

@@ -1,0 +1,78 @@
+name: 同步物品数据到 EdgeOne KV
+
+# 把 item 模块需要的数据文件（公库 data/ 下的最新产物）写入 EdgeOne Makers KV，
+# item 页面通过 item.wfspeed.run/api/data/* 直接读取，无外部回源、毫秒级。
+# 数据更新频率低（每天 1-2 次），此 Action 每天 06:17 UTC 跑一次足够。
+# 需要仓库 Secrets：KV_WRITE_TOKEN（与 relic 数据仓库共用同一个 token）
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取 Ws-Web-assets 的 manifest.json
+        run: |
+          curl -sL --max-time 60 -o /tmp/manifest.json \
+            "https://raw.githubusercontent.com/AdminRoc/Ws-Web-assets/main/manifest.json" || true
+          if [ ! -s /tmp/manifest.json ]; then
+            echo "manifest 拉取失败，跳过（页面有 data.wfspeed.run 兜底）"
+          fi
+
+      - name: 写入 EdgeOne KV
+        env:
+          KV_WRITE_TOKEN: ${{ secrets.KV_WRITE_TOKEN }}
+        run: |
+          declare -A FILES=(
+            ["wm_items_json"]="data/item/wm-items.json"
+            ["icon_index_json"]="data/item/icon-index.json"
+            ["item_names_zh_json"]="data/item/item-names-zh.json"
+            ["wm_zh_supplement_json"]="data/item/wm-zh-supplement.json"
+            ["drops_index_json"]="data/item/drops-index.json"
+            ["wiki_icon_harvest_json"]="data/item/wiki-icon-harvest.json"
+            ["item_i18n_harvest_json"]="data/item/item-i18n-harvest.json"
+            ["pinyin_map_json"]="data/item/pinyin-map.json"
+            ["auction_weapons_riven_json"]="data/item/auction-dicts/auction-weapons-riven.json"
+            ["auction_attrs_riven_json"]="data/item/auction-dicts/auction-attrs-riven.json"
+            ["auction_weapons_lich_json"]="data/item/auction-dicts/auction-weapons-lich.json"
+            ["auction_weapons_sister_json"]="data/item/auction-dicts/auction-weapons-sister.json"
+          )
+          for key in "${!FILES[@]}"; do
+            src="${FILES[$key]}"
+            if [ ! -f "$src" ]; then
+              echo "skip $key ($src 不存在)"
+              continue
+            fi
+            python3 -c "import json; content=open('$src').read(); open('/tmp/kv-payload.json','w').write(json.dumps({'key':'$key','value':content}))"
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
+              -X POST "https://item.wfspeed.run/api/update-kv" \
+              -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data-binary "@/tmp/kv-payload.json")
+            echo "kv $key <- $src -> HTTP $code"
+            rm -f /tmp/kv-payload.json
+          done
+          # manifest.json 来自 Ws-Web-assets 仓库
+          if [ -s /tmp/manifest.json ]; then
+            python3 -c "import json; content=open('/tmp/manifest.json').read(); open('/tmp/kv-payload.json','w').write(json.dumps({'key':'manifest_json','value':content}))"
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
+              -X POST "https://item.wfspeed.run/api/update-kv" \
+              -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data-binary "@/tmp/kv-payload.json")
+            echo "kv manifest_json <- Ws-Web-assets/manifest.json -> HTTP $code"
+            rm -f /tmp/kv-payload.json
+          fi

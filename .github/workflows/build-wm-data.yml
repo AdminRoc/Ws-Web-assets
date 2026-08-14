@@ -1,0 +1,92 @@
+name: 构建物品检索数据(物品库+掉落反查)
+
+# 为"物品检索"页面(item.html)按周期生成两份静态数据并缓存进公库：
+#   data/item/wm-items.json    —— 公共网络抓取的公开交易数据源里的全部可交易物品(中/英名/slug/图标/ducats)
+#   data/item/drops-index.json —— 由公开掉落数据源(官方掉落表)解析出的"物品->掉落来源"反查索引,
+#                            物品中文名取自上面的物品库
+# 抓取/解析脚本在私库;运行前 checkout 私库覆盖进工作树,
+# 只把产物(2 个 json)提交回公库,私库脚本绝不提交回公库。
+#
+# 定时触发由 Cloudflare Workers Cron Triggers 负责(见私库 cloudflare-worker/),
+# 弥补 GitHub 自带 schedule 对不活跃仓库的延迟/跳过。物品库与掉落表变动不频繁,
+# 每天刷新一次足矣;脚本输出带时间戳,变化检测无实质变动时不提交,避免历史膨胀。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 5 * * *'   # 每天 05:37 UTC 兜底(主触发仍由 Cloudflare cron 负责)
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库(抓取/解析脚本)
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树(不会被提交回公库)
+        run: |
+          mkdir -p .github/scripts
+          cp -a _private/.github/scripts/. .github/scripts/
+          rm -rf _private
+
+      - name: 下载公开掉落数据源(官方掉落表 HTML)
+        run: curl -sL --max-time 60 -o droptables.html "https://www.warframe.com/droptables"
+
+      - name: 构建物品库(WM 物品 -> wm-items.json)
+        run: python3 .github/scripts/build_wm_items.py
+
+      - name: 构建掉落反查索引(droptables.html -> drops-index.json)
+        env:
+          DROPTABLE_HTML: droptables.html
+          WM_ITEMS_JSON: data/item/wm-items.json
+        run: python3 .github/scripts/build_drops_index.py
+
+      - name: 清理临时文件(不提交 HTML 原始件)
+        run: rm -f droptables.html
+
+      - name: 提交并推送(只提交产物,无变化时跳过)
+        id: commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/item/wm-items.json data/item/drops-index.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          git commit -m "2026-07-08"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "推送成功(第 $i 次)"
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1
+
+      - name: 刷新腾讯云 CDN 缓存(让刚更新的数据立刻生效,不等缓存自然过期)
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+        run: |
+          pip install --quiet tencentcloud-sdk-python
+          python3 .github/scripts/purge_tencent_cdn.py \
+            "https://wfspeed.run/data/item/wm-items.json" \
+            "https://wfspeed.run/data/item/drops-index.json"

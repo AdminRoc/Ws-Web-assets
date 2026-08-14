@@ -1,0 +1,76 @@
+name: 更新世界状态全量数据
+
+on:
+  # 定时触发已迁移至 Cloudflare Workers Cron Triggers（见私库 cloudflare-worker/），
+  # 每5分钟调用一次本工作流的 workflow_dispatch，比 GitHub 自带的 schedule 更可靠。
+  workflow_dispatch:          # 支持手动 / 外部触发
+
+# 触发频率提高后，若上一次运行（含 git push）还没结束就被下一次触发，
+# 排队而非并行执行，避免两个运行同时 git push 导致冲突。
+concurrency:
+  group: ws-web-worldstate-fastlane   # 只与另一个高频世界状态工作流共锁，不被低频批处理任务阻塞
+  cancel-in-progress: false
+
+jobs:
+  update-worldstate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          fetch-depth: 0
+
+      # 拉取/组装逻辑（拉哪个端点、抽哪些字段、快照怎么生成）已抽入私库脚本
+      # build_worldstate.py，本工作流仅 checkout 私库覆盖后调用，产物提交回公库。
+      - name: 拉取私库（后端脚本）
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树（不会被提交回公库）
+        run: |
+          mkdir -p .github/scripts
+          cp -a _private/.github/scripts/. .github/scripts/
+          rm -rf _private
+
+      - name: 拉取并组装世界状态全量数据 + 同源快照
+        run: python3 .github/scripts/build_worldstate.py
+
+      - name: 补充物品中文名称字典（查询汇集 Wiki API）
+        run: python3 .github/scripts/lookup_names.py
+
+      - name: 提交并推送（只提交产物，无变化时跳过）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 关键修复：从 detached HEAD 切换到本地 main 分支，确保后续 push 有分支上下文
+          git checkout main 2>/dev/null || git checkout -b main origin/main
+
+          # 先拉取远端最新，避免基于旧 commit 产生 non-fast-forward 冲突
+          git pull origin main --rebase --autostash || true
+
+          # 只 add 产物：私库脚本不会被提交回公库
+          git add data/worldstate/worldstate-all.json data/worldstate/worldstate-snapshot.js data/item/item-names-zh.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+
+          git commit -m "$(date +%Y-%m-%d) [skip ci]"
+
+          # 多个定时工作流(本工作流 + 镜像世界状态(辅助源) 等)各自按 cron 推送同一 main 分支,
+          # concurrency 只能串行"同名"工作流,跨工作流仍会撞车导致 push 被拒(non-fast-forward)。
+          # 这里 fetch + rebase + 重试自愈,避免偶发推送失败。产物提交带 [skip ci] 不会触发额外构建。
+          for i in 1 2 3 4 5; do
+            if git push origin main; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull origin main --rebase --autostash || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1

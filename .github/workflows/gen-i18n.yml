@@ -1,0 +1,76 @@
+name: 生成统一翻译库
+
+# 统一中英映射库 data/i18n/wf-i18n.json 是派生产物，由本工作流组装：
+#   log/js/wf-i18n-zh.js（byPath，已迁私库）
+#   data/wf-translations.json（override/planet/mission/misc，已迁私库）
+#   data/item/item-names-zh.json（byName，仍在公库——worldstate 运行时要直接 fetch）
+#   远程 dict.zh.json + ExportRegions（byLang 子集，服务器侧拉取）
+#
+# gen_i18n.py 与两个私有源已迁入私库：运行前 checkout 私库覆盖进
+# 工作树；产物 wf-i18n.json 提交回公库，私库脚本/源绝不提交回公库。
+#
+# 触发：源 item-names-zh.json 由「生成物品中文名补充字典」和「更新世界状态全量数据」
+# 两个工作流维护（均在 Ws-Web-assets 运行），它们完成并写回 Ws-Web 后，
+# 本工作流经 workflow_run 联动重建；另每日 04:17 UTC 兜底刷新 byLang；
+# 改私库源(wf-i18n-zh.js/wf-translations.json)后手动 Run workflow。
+on:
+  workflow_run:
+    workflows:
+      - 手动生成物品中文名补充字典
+      - 更新世界状态全量数据
+    types: [completed]
+  schedule:
+    # 每日 04:17 UTC 刷新 byLang（远程 dict.zh.json 子集）——原由 Cloudflare cron 触发，2026-08-07 迁移回 GitHub schedule
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库（脚本 + 私有源）
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本与源进工作树（这些不会被提交回公库）
+        run: |
+          mkdir -p .github/scripts log/js data
+          cp -a _private/.github/scripts/. .github/scripts/
+          cp -a _private/log/js/. log/js/
+          cp -a _private/data/. data/
+          rm -rf _private
+
+      - name: 重建 data/i18n/wf-i18n.json
+        run: python3 .github/scripts/gen_i18n.py
+
+      - name: 提交并推送（只提交产物，无变化时跳过）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 只 add 产物：私有源(wf-i18n-zh.js/wf-translations.json)和脚本不会被提交回公库
+          git add data/i18n/wf-i18n.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          # 跨工作流并发推送同一 main 会撞车(non-fast-forward),fetch+rebase+重试自愈
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2; exit 1

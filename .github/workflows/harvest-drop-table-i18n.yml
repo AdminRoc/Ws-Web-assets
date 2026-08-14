@@ -1,0 +1,63 @@
+name: 挖掘掉落来源汉化候选词(人工review用,非自动生效)
+
+# 物品检索页面(item.html)的"游戏掉落来源"卡片里，凡是没在汉化库里查到对应译名的
+# 专有名词(主要是Boss/敌人/特殊任务关名)，目前显示为可点击的中文维基跳转链接。
+# 本workflow手动触发一次，从公共网络抓取的公开数据源
+# （dict.en.json + dict.zh.json）里按精确字符串匹配反查这些专名的候选中文译名，
+# 写出 data/drop-table-i18n-harvest.json 供人工 review。
+#
+# 注意：本workflow只产出候选文件，绝不自动把候选词写进 data 的正式汉化库——
+# 候选词必须先经人工确认(尤其要确认是简体中文、不是机翻/繁体)才能手动搬进
+# 私库 data/wf-translations.json 的 DROP_LOCATION/MISC 等分类。
+# 抓取/比对脚本在私库；运行前 checkout 私库覆盖进工作树，
+# 只把候选文件提交回公库，私库脚本绝不提交回公库。
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库(挖掘脚本)
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本进工作树(不会被提交回公库)
+        run: |
+          mkdir -p .github/scripts
+          cp -a _private/.github/scripts/. .github/scripts/
+          rm -rf _private
+
+      - name: 挖掘候选译名
+        run: python3 .github/scripts/harvest_drop_table_i18n.py
+
+      - name: 提交并推送(只提交候选文件,无变化时跳过)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/drop-table-i18n-harvest.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2
+          exit 1

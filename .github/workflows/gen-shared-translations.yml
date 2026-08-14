@@ -1,0 +1,69 @@
+name: 生成共享翻译产物
+
+# 通用汉化主源 data/wf-translations.json 已迁私库，由它派生公库产物：
+#   js/wf-translations.js   （worldstate 等前端直接 <script> 加载）
+#   data/worldstate/cn-solnodes.json   （worldstate.html 国服子状态用，国服官方中文节点全名，
+#                             来自公开接口，与上面那份词源不同不混用）
+# 生成脚本 gen_wf_translations.py / gen_cn_solnodes.py 也在私库。
+# 本工作流 checkout 私库覆盖后在公库工作树里运行它们（此时输出路径 js/、data/
+# 才正确），只把这两个产物提交回公库。
+# （eelog 已剥离至独立库 Ws-Web-eelog，solNodes.js 不再由本工作流生成）
+#
+# 何时触发：改了私库 data/wf-translations.json 后手动 Run。
+on:
+  schedule:
+    # 每日 04:17 UTC 兜底刷新（源不变则产物不变、无变化不提交）——原由 Cloudflare cron 触发，2026-08-07 迁移回 GitHub schedule
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Ws-Web 公库
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+
+      - name: 拉取私库（脚本 + 通用汉化源）
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: _private
+
+      - name: 覆盖私库脚本与源进工作树（不会被提交回公库）
+        run: |
+          mkdir -p .github/scripts data
+          cp -a _private/.github/scripts/. .github/scripts/
+          cp -a _private/data/. data/
+          rm -rf _private
+
+      - name: 生成 js/wf-translations.js
+        run: python3 .github/scripts/gen_wf_translations.py
+
+      - name: 生成 data/worldstate/cn-solnodes.json（国服官方节点中文名，worldstate.html 国服子状态用）
+        run: python3 .github/scripts/gen_cn_solnodes.py
+
+      - name: 提交并推送（只提交这两个产物，无变化时跳过）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add js/wf-translations.js data/worldstate/cn-solnodes.json
+          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
+          git commit -m "2026-07-08"
+          # 跨工作流并发推送同一 main 会撞车(non-fast-forward),fetch+rebase+重试自愈
+          for i in 1 2 3 4 5; do
+            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
+            git pull --rebase --autostash origin main || true
+          done
+          echo "重试多次仍推送失败" >&2; exit 1

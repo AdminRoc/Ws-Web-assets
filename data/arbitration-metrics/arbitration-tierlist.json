@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "source": "https://arbi.wf.wiki/data/tierlist.default.json",
+  "fetchedAt": 1786703200000,
+  "tiers": ["S", "A+", "A", "A-", "B", "C"],
+  "tierBuckets": {
+    "S": ["SolNode450", "SolNode106", "SolNode25", "SolNode64"],
+    "A+": ["SolNode23", "SolNode172", "SolNode719", "SolNode147"],
+    "A": ["SolNode224", "SolNode167", "SolNode412", "SolNode211"],
+    "A-": ["SolNode43", "SolNode85"],
+    "B": [],
+    "C": ["SolNode185", "SolNode18"]
+  }
+}

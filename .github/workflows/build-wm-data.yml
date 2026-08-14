@@ -7,9 +7,9 @@ name: 构建物品检索数据(物品库+掉落反查)
 # 抓取/解析脚本在私库;运行前 checkout 私库覆盖进工作树,
 # 只把产物(2 个 json)提交回公库,私库脚本绝不提交回公库。
 #
-# 定时触发由 Cloudflare Workers Cron Triggers 负责(见私库 cloudflare-worker/),
-# 弥补 GitHub 自带 schedule 对不活跃仓库的延迟/跳过。物品库与掉落表变动不频繁,
-# 每天刷新一次足矣;脚本输出带时间戳,变化检测无实质变动时不提交,避免历史膨胀。
+# 定时触发由 GitHub 自带 schedule 负责（见下方 on.schedule；早期曾由 Cloudflare
+# Worker Cron Triggers 触发，2026-08-14 起统一使用 GitHub schedule）。
+# 物品库与掉落表变动不频繁,每天刷新一次足矣;脚本输出带时间戳,变化检测无实质变动时不提交,避免历史膨胀。
 on:
   workflow_dispatch:
   schedule:

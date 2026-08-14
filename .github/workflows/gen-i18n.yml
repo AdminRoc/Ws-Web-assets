@@ -9,15 +9,13 @@ name: 生成统一翻译库
 # gen_i18n.py 与两个私有源已迁入私库：运行前 checkout 私库覆盖进
 # 工作树；产物 wf-i18n.json 提交回公库，私库脚本/源绝不提交回公库。
 #
-# 触发：源 item-names-zh.json 由「生成物品中文名补充字典」和「更新世界状态全量数据」
-# 两个工作流维护（均在 Ws-Web-assets 运行），它们完成并写回 Ws-Web 后，
-# 本工作流经 workflow_run 联动重建；另每日 04:17 UTC 兜底刷新 byLang；
-# 改私库源(wf-i18n-zh.js/wf-translations.json)后手动 Run workflow。
+# 触发：源 item-names-zh.json 由「手动生成物品中文名补充字典」工作流维护
+# （在 Ws-Web-assets 运行），其完成并写回 Ws-Web 后，本工作流经 workflow_run
+# 联动重建；另每日 04:17 UTC 兜底刷新 byLang；改私库源(wf-i18n-zh.js/wf-translations.json)后手动 Run workflow。
 on:
   workflow_run:
     workflows:
       - 手动生成物品中文名补充字典
-      - 更新世界状态全量数据
     types: [completed]
   schedule:
     # 每日 04:17 UTC 刷新 byLang（远程 dict.zh.json 子集）——原由 Cloudflare cron 触发，2026-08-07 迁移回 GitHub schedule

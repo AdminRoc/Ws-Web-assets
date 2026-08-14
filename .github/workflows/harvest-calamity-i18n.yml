@@ -2,7 +2,7 @@ name: 挖掘官方本地化汉化候选词(人工review用,非自动生效)
 
 # worldstate.html 等页面在国际服模式下，部分任务类型/星球/阵营/集团/节点名称没有
 # 覆盖到 data/wf-translations.json，目前要么显示英文原文，要么靠从公开世界状态接口
-# en/zh 双语快照里 diff 出来的候选(harvest_aux_i18n.py)。
+# en/zh 双语快照里 diff 出来的候选（该旧路线的 harvest_aux_i18n.py 已废弃删除）。
 # 本workflow手动触发一次，直接从游戏官方本地化数据的逐版本镜像
 # （dict.en.json/dict.zh.json + ExportMissionTypes/
 # ExportFactions/ExportSyndicates/ExportRegions）反查候选中文译名，准确度高于diff候选，

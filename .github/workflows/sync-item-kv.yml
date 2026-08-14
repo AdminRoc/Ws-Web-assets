@@ -36,6 +36,8 @@ jobs:
         env:
           KV_WRITE_TOKEN: ${{ secrets.KV_WRITE_TOKEN }}
         run: |
+          set +e
+          fail=0
           declare -A FILES=(
             ["wm_items_json"]="data/item/wm-items.json"
             ["icon_index_json"]="data/item/icon-index.json"
@@ -57,22 +59,38 @@ jobs:
               continue
             fi
             python3 -c "import json; content=open('$src').read(); open('/tmp/kv-payload.json','w').write(json.dumps({'key':'$key','value':content}))"
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
-              -X POST "https://item.wfspeed.run/api/update-kv" \
-              -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
-              -H "Content-Type: application/json" \
-              --data-binary "@/tmp/kv-payload.json")
+            code=""
+            # 每个文件最多重试 3 次，超时 300s（大文件如 drops-index 4.4MB 偶发慢）
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 300 \
+                -X POST "https://item.wfspeed.run/api/update-kv" \
+                -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
+                -H "Content-Type: application/json" \
+                --data-binary "@/tmp/kv-payload.json")
+              if [ "$code" = "200" ]; then break; fi
+              echo "kv $key 第 $attempt 次写入 HTTP $code，稍后重试..."
+              sleep 5
+            done
             echo "kv $key <- $src -> HTTP $code"
+            if [ "$code" != "200" ]; then fail=1; fi
             rm -f /tmp/kv-payload.json
           done
           # manifest.json 来自 Ws-Web-assets 仓库
           if [ -s /tmp/manifest.json ]; then
             python3 -c "import json; content=open('/tmp/manifest.json').read(); open('/tmp/kv-payload.json','w').write(json.dumps({'key':'manifest_json','value':content}))"
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
-              -X POST "https://item.wfspeed.run/api/update-kv" \
-              -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
-              -H "Content-Type: application/json" \
-              --data-binary "@/tmp/kv-payload.json")
+            code=""
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 300 \
+                -X POST "https://item.wfspeed.run/api/update-kv" \
+                -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
+                -H "Content-Type: application/json" \
+                --data-binary "@/tmp/kv-payload.json")
+              if [ "$code" = "200" ]; then break; fi
+              echo "kv manifest_json 第 $attempt 次写入 HTTP $code，稍后重试..."
+              sleep 5
+            done
             echo "kv manifest_json <- Ws-Web-assets/manifest.json -> HTTP $code"
+            if [ "$code" != "200" ]; then fail=1; fi
             rm -f /tmp/kv-payload.json
           fi
+          if [ "$fail" != "0" ]; then echo "存在 KV 写入失败，请检查"; exit 1; fi

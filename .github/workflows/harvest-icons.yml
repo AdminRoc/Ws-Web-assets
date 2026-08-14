@@ -4,7 +4,7 @@ name: 每日抓取物品图标
 # 供 item 独立站等子项目经 jsDelivr 直接引用（warframe.market 图片源已被
 # hotlink 保护封锁，wiki 为可用替代源）。
 # 抓取逻辑：.github/scripts/harvest_icons.py
-#   - 物品清单来自 Ws-Web 公库 wm-items.json + drops-index.json（公开仓库直拉）
+#   - 物品清单来自 Ws-Web 公库 data/item/wm-items.json + data/item/drops-index.json（公开仓库直拉）
 #   - WM 物品图标由主 manifest 覆盖（WM 源，本地过验证爬取），脚本仅补漏：
 #     WM unknown + 掉落专属物品的 wiki 图标
 #   - 已有 manifest 条目跳过，缺失文件增量下载（不 churn git 历史）

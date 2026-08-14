@@ -2,8 +2,8 @@
 """Harvest item icons from wiki.warframe.com into this assets repo.
 
 Sources (Ws-Web public repo, raw.githubusercontent):
-  data/wm-items.json     -> all Warframe.market items (en names)
-  data/drops-index.json  -> drop-only items not present in wm-items
+data/item/wm-items.json     -> all Warframe.market items (en names)
+data/item/drops-index.json  -> drop-only items not present in wm-items
 Resolve each item to a wiki thumbnail via MediaWiki API (pageimages, 300px),
 download the image into icons/<NormalizedName>.<ext>, and write manifest.json
 mapping original en name -> repo-relative path. Runs daily on a schedule:
@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 API = "https://wiki.warframe.com/api.php"
 UA = "wfspeed-assets/1.0 (+https://wfspeed.run; non-commercial icon harvest)"
-RAW = "https://raw.githubusercontent.com/AdminRoc/Ws-Web/main/data/"
+RAW = "https://raw.githubusercontent.com/AdminRoc/Ws-Web/main/data/item/"
 OUT_DIR = "icons"
 
 QTY_PREFIX_RE = re.compile(r"^\d+[xX]?\s+")

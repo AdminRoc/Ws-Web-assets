@@ -44,16 +44,38 @@ jobs:
         run: python3 .github/scripts/harvest_wm_items_i18n.py
 
       - name: 提交并推送(无变化时跳过)
+        id: commit
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/item/item-i18n-harvest.json
-          git diff --staged --quiet && { echo "无实质变动，跳过提交"; exit 0; }
+          git diff --staged --quiet && { echo "无实质变动，跳过提交"; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; }
           git commit -m "2026-07-08"
           for i in 1 2 3 4 5; do
-            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
+            if git push; then echo "推送成功(第 $i 次)"; echo "pushed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             echo "推送被拒(第 $i 次)，拉取远端后 rebase 重试..."
             git pull --rebase --autostash origin main || true
           done
           echo "重试多次仍推送失败" >&2
           exit 1
+
+      - name: 同步产物到 assets 镜像(world 等外部站点经 jsDelivr 引用)
+        if: steps.commit.outputs.pushed == 'true'
+        run: |
+          rm -rf /tmp/assets-mirror
+          git clone --depth 1 "https://x-access-token:${PRIVATE_REPO_PAT}@github.com/AdminRoc/Ws-Web-assets.git" /tmp/assets-mirror
+          mkdir -p /tmp/assets-mirror/data/item
+          cp data/item/item-i18n-harvest.json /tmp/assets-mirror/data/item/
+          cd /tmp/assets-mirror
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/item/item-i18n-harvest.json
+          git diff --staged --quiet && { echo "assets 镜像无变化"; exit 0; }
+          git commit -m "sync item-i18n-harvest $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "assets 镜像同步成功"; exit 0; fi
+            git pull --rebase --autostash origin main || true
+          done
+          echo "assets 镜像同步失败" >&2; exit 1
+        env:
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}

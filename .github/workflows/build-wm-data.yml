@@ -80,6 +80,27 @@ jobs:
           echo "重试多次仍推送失败" >&2
           exit 1
 
+      - name: 同步产物到 assets 镜像(harvest-icons 等 assets 内 workflow 经 raw 引用)
+        if: steps.commit.outputs.pushed == 'true'
+        run: |
+          rm -rf /tmp/assets-mirror
+          git clone --depth 1 "https://x-access-token:${PRIVATE_REPO_PAT}@github.com/AdminRoc/Ws-Web-assets.git" /tmp/assets-mirror
+          mkdir -p /tmp/assets-mirror/data/item
+          cp data/item/wm-items.json data/item/drops-index.json /tmp/assets-mirror/data/item/
+          cd /tmp/assets-mirror
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/item/wm-items.json data/item/drops-index.json
+          git diff --staged --quiet && { echo "assets 镜像无变化"; exit 0; }
+          git commit -m "sync wm-items/drops-index $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "assets 镜像同步成功"; exit 0; fi
+            git pull --rebase --autostash origin main || true
+          done
+          echo "assets 镜像同步失败" >&2; exit 1
+        env:
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
+
       - name: 刷新腾讯云 CDN 缓存(让刚更新的数据立刻生效,不等缓存自然过期)
         if: steps.commit.outputs.pushed == 'true'
         env:

@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 API = "https://wiki.warframe.com/api.php"
 UA = "wfspeed-assets/1.0 (+https://wfspeed.run; non-commercial icon harvest)"
-RAW = "https://raw.githubusercontent.com/AdminRoc/Ws-Web/main/data/item/"
+RAW = "https://raw.githubusercontent.com/AdminRoc/Ws-Web-assets/main/data/item/"
 OUT_DIR = "icons"
 
 QTY_PREFIX_RE = re.compile(r"^\d+[xX]?\s+")

@@ -35,7 +35,7 @@
       {
         "name": "Coda Bassocyst",
         "element": "Magnetic",
-        "bonusPct": 26.5
+        "bonusPct": 26.9
       },
       {
         "name": "Coda Bubonico",
@@ -68,8 +68,8 @@
         "bonusPct": 44.6
       }
     ],
-    "changedAt": 1786863682629
+    "changedAt": 1786951135457
   },
   "source": "https://docs.google.com/spreadsheets/d/1hyWSyPqw1072vJR2eacYVcpBiL_cdL0E3MCs5Vb6s40",
-  "fetchedAt": "2026-08-16T07:01:22Z"
+  "fetchedAt": "2026-08-17T07:18:55Z"
 }

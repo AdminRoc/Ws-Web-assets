@@ -3,73 +3,73 @@
     "weapons": [
       {
         "name": "Tenet Ferrox",
-        "element": "Magnetic",
-        "bonusPct": 27.6
+        "element": "Impact",
+        "bonusPct": 25.9
       },
       {
         "name": "Tenet Grigori",
-        "element": "Electricity",
-        "bonusPct": 50.5
+        "element": "Impact",
+        "bonusPct": 30.0
       },
       {
         "name": "Tenet Livia",
-        "element": "Radiation",
-        "bonusPct": 33.8
+        "element": "Heat",
+        "bonusPct": 27.9
       },
       {
         "name": "Tenet Exec",
-        "element": "Radiation",
-        "bonusPct": 31.3
+        "element": "Impact",
+        "bonusPct": 28.3
       },
       {
         "name": "Tenet Agendus",
         "element": "Heat",
-        "bonusPct": 33.4
+        "bonusPct": 25.3
       }
     ],
-    "changedAt": 1787123291275
+    "changedAt": 1787556680380
   },
   "coda": {
-    "batch": "A",
+    "batch": "B",
     "weapons": [
       {
-        "name": "Coda Catabolyst",
-        "element": "Radiation",
-        "bonusPct": 29.1
+        "name": "Coda Bassocyst",
+        "element": "Toxin",
+        "bonusPct": 36.5
       },
       {
-        "name": "Coda Hema",
-        "element": "Radiation",
-        "bonusPct": 43.5
-      },
-      {
-        "name": "Coda Mire",
+        "name": "Coda Bubonico",
         "element": "Cold",
-        "bonusPct": 36.1
+        "bonusPct": 38.9
       },
       {
-        "name": "Coda Motovore",
-        "element": "Electricity",
-        "bonusPct": 52.3
+        "name": "Coda Caustacyst",
+        "element": "Magnetic",
+        "bonusPct": 48.7
       },
       {
-        "name": "Coda Pox",
+        "name": "Coda Hirudo",
+        "element": "Cold",
+        "bonusPct": 60.0
+      },
+      {
+        "name": "Coda Pathocyst",
+        "element": "Toxin",
+        "bonusPct": 47.0
+      },
+      {
+        "name": "Coda Synapse",
         "element": "Heat",
-        "bonusPct": 29.8
+        "bonusPct": 25.1
       },
       {
-        "name": "Coda Sporothrix",
-        "element": "Impact",
-        "bonusPct": 25.8
-      },
-      {
-        "name": "Dual Coda Torxica",
-        "element": "Cold",
-        "bonusPct": 43.8
+        "name": "Coda Tysis",
+        "element": "Electricity",
+        "bonusPct": 25.3
       }
     ],
-    "changedAt": 1787209765899
+    "changedAt": 1787556680380
   },
   "source": "https://docs.google.com/spreadsheets/d/1hyWSyPqw1072vJR2eacYVcpBiL_cdL0E3MCs5Vb6s40",
-  "fetchedAt": "2026-08-23T07:04:09Z"
+  "fetchedAt": "2026-08-24T07:31:20Z"
 }

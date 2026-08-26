@@ -17,7 +17,7 @@ name: 构建仲裁分节点效率基准数据
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 1 * * *'   # 每天 01:15 UTC（2026-08-07 从每日 3 次降频：基准数据日级变化，1 次足够，省构建配额）
+    - cron: '0 */2 * * *'   # 每两小时一次（UTC）
 
 concurrency:
   group: ws-web-batch-lock   # 与其它低频批处理任务共用一把锁，避免同时写 data/ 冲突
@@ -50,7 +50,11 @@ jobs:
           rm -rf _private
 
       - name: 构建分节点效率基准数据
-        run: python3 .github/scripts/build_arb_baseline.py
+        env:
+          ARB_SOURCE_URL: ${{ secrets.ARB_SOURCE_URL }}
+        run: |
+          test -n "$ARB_SOURCE_URL" || { echo '缺少 ARB_SOURCE_URL Secret' >&2; exit 1; }
+          python3 .github/scripts/build_arb_baseline.py
 
       - name: 提交并推送(只提交产物,无变化时跳过)
         id: commit

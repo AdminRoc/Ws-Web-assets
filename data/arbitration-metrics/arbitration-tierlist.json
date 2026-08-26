@@ -1,6 +1,5 @@
 {
   "schema": 1,
-  "source": "https://arbi.wf.wiki/data/tierlist.default.json",
   "fetchedAt": 1786703200000,
   "tiers": ["S", "A+", "A", "A-", "B", "C"],
   "tierBuckets": {

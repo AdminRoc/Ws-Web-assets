@@ -31,25 +31,42 @@ jobs:
             echo "manifest 拉取失败，跳过（页面有 data.wfspeed.run 兜底）"
           fi
 
-      - name: 写入 EdgeOne KV (直写，不经 /api/update-kv，本地已提交 kv_put 真源)
+      - name: 写入 EdgeOne KV (直写 KV 优先，回退 HTTP，本地已提交 kv_put 真源)
         env:
           TENCENTCLOUD_SECRET_ID: ${{ secrets.TENCENTCLOUD_SECRET_ID }}
           TENCENTCLOUD_SECRET_KEY: ${{ secrets.TENCENTCLOUD_SECRET_KEY }}
           ZONE_ID: ${{ secrets.ZONE_ID }}
           KV_NAMESPACE: ${{ secrets.KV_NAMESPACE_ASSETS }}
+          KV_WRITE_TOKEN: ${{ secrets.KV_WRITE_TOKEN }}
         run: |
           set -euo pipefail
-          test -n "${TENCENTCLOUD_SECRET_ID}" || { echo 'Missing TENCENTCLOUD_SECRET_ID'; exit 1; }
           pip install -q tencentcloud-sdk-python cryptography
-          for spec in wm_items_json=data/item/wm-items.json icon_index_json=data/item/icon-index.json item_names_zh_json=data/item/item-names-zh.json pinyin_map_json=data/item/pinyin-map.json wiki_icon_harvest_json=data/item/wiki-icon-harvest.json item_i18n_harvest_json=data/item/item-i18n-harvest.json; do
-            key="${spec%%=*}"; file="${spec#*=}";
-            test -f "${file}" || { echo "skip $key ($file 不存在)"; continue; }
-            # 大文件 drops-index 4.3MB 超限仅 cdn，已在产线控制，此处跳过
-            if [ "${key}" = "drops_index_json" ]; then echo "skip $key (超限仅 cdn)"; continue; fi
-            echo "KV put $key <- $file"
-            python3 .github/scripts/kv_put.py --zone "${ZONE_ID}" --ns "${KV_NAMESPACE}" --key "${key}" --file "${file}"
-          done
-          if [ -s /tmp/manifest.json ]; then
-            echo "KV put manifest_json <- /tmp/manifest.json"
-            python3 .github/scripts/kv_put.py --zone "${ZONE_ID}" --ns "${KV_NAMESPACE}" --key "manifest_json" --file "/tmp/manifest.json"
+          if [ -n "${TENCENTCLOUD_SECRET_ID:-}" ] && [ -n "${TENCENTCLOUD_SECRET_KEY:-}" ] && [ -n "${ZONE_ID:-}" ] && [ -n "${KV_NAMESPACE:-}" ]; then
+            echo "直写 KV via TencentCloud API"
+            for spec in wm_items_json=data/item/wm-items.json icon_index_json=data/item/icon-index.json item_names_zh_json=data/item/item-names-zh.json pinyin_map_json=data/item/pinyin-map.json wiki_icon_harvest_json=data/item/wiki-icon-harvest.json item_i18n_harvest_json=data/item/item-i18n-harvest.json; do
+              key="${spec%%=*}"; file="${spec#*=}";
+              test -f "${file}" || { echo "skip $key ($file 不存在)"; continue; }
+              if [ "${key}" = "drops_index_json" ]; then echo "skip $key (超限仅 cdn)"; continue; fi
+              echo "KV put $key <- $file"
+              python3 .github/scripts/kv_put.py --zone "${ZONE_ID}" --ns "${KV_NAMESPACE}" --key "${key}" --file "${file}"
+            done
+            if [ -s /tmp/manifest.json ]; then
+              echo "KV put manifest_json <- /tmp/manifest.json"
+              python3 .github/scripts/kv_put.py --zone "${ZONE_ID}" --ns "${KV_NAMESPACE}" --key "manifest_json" --file "/tmp/manifest.json"
+            fi
+          elif [ -n "${KV_WRITE_TOKEN:-}" ]; then
+            echo "回退 HTTP POST https://item.wfspeed.run/api/update-kv"
+            for spec in wm_items_json=data/item/wm-items.json icon_index_json=data/item/icon-index.json item_names_zh_json=data/item/item-names-zh.json pinyin_map_json=data/item/pinyin-map.json wiki_icon_harvest_json=data/item/wiki-icon-harvest.json item_i18n_harvest_json=data/item/item-i18n-harvest.json; do
+              key="${spec%%=*}"; file="${spec#*=}";
+              test -f "${file}" || { echo "skip $key ($file 不存在)"; continue; }
+              if [ "${key}" = "drops_index_json" ]; then echo "skip $key (超限仅 cdn)"; continue; fi
+              python3 -c 'import json,sys; k,p=sys.argv[1:]; v=open(p,encoding="utf-8").read(); print(json.dumps({"key":k,"value":v},ensure_ascii=False))' "${key}" "${file}" > /tmp/payload.json
+              curl --fail --retry 3 --max-time 300 -X POST "https://item.wfspeed.run/api/update-kv" -H "Authorization: Bearer ${KV_WRITE_TOKEN}" -H 'Content-Type: application/json' --data-binary @/tmp/payload.json
+            done
+            if [ -s /tmp/manifest.json ]; then
+              python3 -c "import json; v=open('/tmp/manifest.json',encoding='utf-8').read(); print(json.dumps({'key':'manifest_json','value':v},ensure_ascii=False))" > /tmp/payload.json
+              curl --fail --retry 3 --max-time 300 -X POST "https://item.wfspeed.run/api/update-kv" -H "Authorization: Bearer ${KV_WRITE_TOKEN}" -H 'Content-Type: application/json' --data-binary @/tmp/payload.json
+            fi
+          else
+            echo "Missing KV credentials"; exit 1
           fi

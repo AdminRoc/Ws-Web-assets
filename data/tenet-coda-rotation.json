@@ -30,46 +30,46 @@
     "changedAt": 1788184711639
   },
   "coda": {
-    "batch": "A",
+    "batch": "B",
     "weapons": [
       {
-        "name": "Coda Catabolyst",
-        "element": "Radiation",
-        "bonusPct": 30.5
+        "name": "Coda Bassocyst",
+        "element": "Toxin",
+        "bonusPct": 25.5
       },
       {
-        "name": "Coda Hema",
-        "element": "Magnetic",
-        "bonusPct": 28.9
-      },
-      {
-        "name": "Coda Mire",
+        "name": "Coda Bubonico",
         "element": "Cold",
-        "bonusPct": 25.2
+        "bonusPct": 43.7
       },
       {
-        "name": "Coda Motovore",
-        "element": "Impact",
-        "bonusPct": 34.9
-      },
-      {
-        "name": "Coda Pox",
+        "name": "Coda Caustacyst",
         "element": "Magnetic",
-        "bonusPct": 29.6
+        "bonusPct": 26.2
       },
       {
-        "name": "Coda Sporothrix",
+        "name": "Coda Hirudo",
+        "element": "Cold",
+        "bonusPct": 37.2
+      },
+      {
+        "name": "Coda Pathocyst",
+        "element": "Toxin",
+        "bonusPct": 29.5
+      },
+      {
+        "name": "Coda Synapse",
+        "element": "Heat",
+        "bonusPct": 25.4
+      },
+      {
+        "name": "Coda Tysis",
         "element": "Electricity",
-        "bonusPct": 25.7
-      },
-      {
-        "name": "Dual Coda Torxica",
-        "element": "Magnetic",
-        "bonusPct": 25.3
+        "bonusPct": 27.4
       }
     ],
-    "changedAt": 1788091104759
+    "changedAt": 1788263022112
   },
   "source": "https://docs.google.com/spreadsheets/d/1hyWSyPqw1072vJR2eacYVcpBiL_cdL0E3MCs5Vb6s40",
-  "fetchedAt": "2026-08-31T13:58:31Z"
+  "fetchedAt": "2026-09-01T11:43:42Z"
 }

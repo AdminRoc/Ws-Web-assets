@@ -12,6 +12,12 @@ name: 构建物品检索数据(物品库+掉落反查)
 # 物品库与掉落表变动不频繁,每天刷新一次足矣;脚本输出带时间戳,变化检测无实质变动时不提交,避免历史膨胀。
 on:
   workflow_dispatch:
+    inputs:
+      retry_attempt:
+        description: Internal stale-producer retry marker
+        required: false
+        default: '0'
+        type: string
   schedule:
     - cron: '37 5 * * *'   # 每天 05:37 UTC 兜底(主触发仍由 Cloudflare cron 负责)
 
@@ -24,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout Ws-Web 公库
         uses: actions/checkout@v5
@@ -36,7 +43,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: AdminRoc/Ws-Web-core
-          ref: 261c5681fb2e23f6a1297d6b7218857c7d53e9e0
+          ref: 17f4edb881ae478d93bf978824a1c0608bf8ba1b
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           path: _private
 
@@ -61,6 +68,11 @@ jobs:
       - name: 清理临时文件(不提交 HTML 原始件)
         run: rm -f droptables.html
 
+      - name: 验证 Ws-Web target revision 未推进
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)"
+
       - name: 提交并推送(只提交产物,无变化时跳过)
         id: commit
         run: |
@@ -76,7 +88,7 @@ jobs:
               exit 0
             fi
             echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
-            git pull --rebase --autostash origin main || true
+            GH_TOKEN="${{ github.token }}" python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)" --allow-committed-head
           done
           echo "重试多次仍推送失败" >&2
           exit 1

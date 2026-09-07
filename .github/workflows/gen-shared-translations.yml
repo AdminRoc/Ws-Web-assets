@@ -15,6 +15,12 @@ on:
     # 每日 04:17 UTC 兜底刷新（源不变则产物不变、无变化不提交）——原由 Cloudflare cron 触发，2026-08-07 迁移回 GitHub schedule
     - cron: '17 4 * * *'
   workflow_dispatch:
+    inputs:
+      retry_attempt:
+        description: Internal stale-producer retry marker
+        required: false
+        default: '0'
+        type: string
 
 concurrency:
   group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
@@ -25,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout Ws-Web 公库
         uses: actions/checkout@v5
@@ -37,7 +44,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: AdminRoc/Ws-Web-core
-          ref: 261c5681fb2e23f6a1297d6b7218857c7d53e9e0
+          ref: 17f4edb881ae478d93bf978824a1c0608bf8ba1b
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           path: _private
 
@@ -54,6 +61,11 @@ jobs:
       - name: 生成 data/worldstate/cn-solnodes.json（国服官方节点中文名，worldstate.html 国服子状态用）
         run: python3 .github/scripts/gen_cn_solnodes.py
 
+      - name: 验证 Ws-Web target revision 未推进
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)"
+
       - name: 提交并推送（只提交这两个产物，无变化时跳过）
         id: commit
         run: |
@@ -66,7 +78,7 @@ jobs:
           for i in 1 2 3 4 5; do
             if git push; then echo "推送成功(第 $i 次)"; echo "pushed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
-            git pull --rebase --autostash origin main || true
+            GH_TOKEN="${{ github.token }}" python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)" --allow-committed-head
           done
           echo "重试多次仍推送失败" >&2; exit 1
 

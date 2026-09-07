@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "release_id": "08bba338dc492552ec03bc3e3bbea0f02c8e1c95",
+  "generated_at": "2026-09-07T08:39:23Z",
+  "source_repository": "Ws-Web",
+  "artifacts": {
+    "wm-items": {
+      "path": "data/item/wm-items.json",
+      "sha256": "9aed610e3208180865fdab7ca812baeec6313d17aa0227e6e7a34d8d511caae6",
+      "bytes": 637847,
+      "delivery": "kv-and-assets",
+      "kv_key": "wm_items_json"
+    },
+    "drops-index": {
+      "path": "data/item/drops-index.json",
+      "sha256": "33f4b8094296200cffe1a0d76787af4f06c2bf42e9c09661eed157b0812e08eb",
+      "bytes": 4441180,
+      "delivery": "assets-only",
+      "kv_key": null
+    },
+    "icon-index": {
+      "path": "data/item/icon-index.json",
+      "sha256": "1a2d0b36d2da15fd45016d0662e621f75732ebbb9d9242a62b3d203bc0786c5f",
+      "bytes": 510150,
+      "delivery": "kv-and-assets",
+      "kv_key": "icon_index_json"
+    },
+    "item-names-zh": {
+      "path": "data/item/item-names-zh.json",
+      "sha256": "879c7f0c84999a6ff3d507c89857d9e6091b5f8e9b609eb444bac7f08fd2fb6b",
+      "bytes": 4983,
+      "delivery": "kv-and-assets",
+      "kv_key": "item_names_zh_json"
+    },
+    "wm-zh-supplement": {
+      "path": "data/item/wm-zh-supplement.json",
+      "sha256": "2e52a1cd3335dd73ef0d4f1a67cbc170ec4a0a5d9216e14af4e988068ec88500",
+      "bytes": 186328,
+      "delivery": "kv-and-assets",
+      "kv_key": "wm_zh_supplement_json"
+    },
+    "wiki-icon-harvest": {
+      "path": "data/item/wiki-icon-harvest.json",
+      "sha256": "2c5f87987f3340cba4d83fbb0ca61b5cacda3082c2b2d660ec791be2c07dd450",
+      "bytes": 53223,
+      "delivery": "kv-and-assets",
+      "kv_key": "wiki_icon_harvest_json"
+    },
+    "item-i18n-harvest": {
+      "path": "data/item/item-i18n-harvest.json",
+      "sha256": "b457b86229ba921d442f375c82949d9c578139b475dff4f53f012e2b2dca021b",
+      "bytes": 196372,
+      "delivery": "kv-and-assets",
+      "kv_key": "item_i18n_harvest_json"
+    },
+    "pinyin-map": {
+      "path": "data/item/pinyin-map.json",
+      "sha256": "30b9ea8e197ab2433ec543f8d8e448262c01941257189a624f729e5109451b9c",
+      "bytes": 29041,
+      "delivery": "kv-and-assets",
+      "kv_key": "pinyin_map_json"
+    },
+    "auction-weapons-riven": {
+      "path": "data/item/auction-dicts/auction-weapons-riven.json",
+      "sha256": "d769047e6f9c69d1c5bbca3cce6199b249fd9413729a8d01c58af53cbdeeab56",
+      "bytes": 243439,
+      "delivery": "kv-and-assets",
+      "kv_key": "auction_weapons_riven_json"
+    },
+    "auction-attrs-riven": {
+      "path": "data/item/auction-dicts/auction-attrs-riven.json",
+      "sha256": "37d9adcf5bc0142e09e8f05ac1aaf70952d942a4aa5957d2c6bb0dbd04be17e6",
+      "bytes": 13191,
+      "delivery": "kv-and-assets",
+      "kv_key": "auction_attrs_riven_json"
+    },
+    "auction-weapons-lich": {
+      "path": "data/item/auction-dicts/auction-weapons-lich.json",
+      "sha256": "a2be585cf06dc01cb86a8517d53d54056f73e06399c701deee00c3d081838b18",
+      "bytes": 11923,
+      "delivery": "kv-and-assets",
+      "kv_key": "auction_weapons_lich_json"
+    },
+    "auction-weapons-sister": {
+      "path": "data/item/auction-dicts/auction-weapons-sister.json",
+      "sha256": "c064957edeea46ee1935e96f3be6a837c5ed74c78c4559fe0ce016f21d80888c",
+      "bytes": 7519,
+      "delivery": "kv-and-assets",
+      "kv_key": "auction_weapons_sister_json"
+    },
+    "icon-manifest": {
+      "path": "manifest.json",
+      "sha256": "986aae63446978248ef91e1bc0b23a4fa1010d9b842dc8a90d41dfa74841a8c8",
+      "bytes": 224649,
+      "delivery": "kv-and-assets",
+      "kv_key": "manifest_json"
+    }
+  }
+}

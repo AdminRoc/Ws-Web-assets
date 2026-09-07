@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "name": "wfspeed-item-artifact-contract",
+  "description": "Declarative contract for plaintext item data published from Ws-Web to Ws-Web-assets and wfspeed-item ITEM_KV.",
+  "kv_value_limit_bytes": 1048576,
+  "source_repository": "Ws-Web",
+  "asset_repository": "Ws-Web-assets",
+  "artifacts": [
+    {
+      "id": "wm-items",
+      "source_path": "data/item/wm-items.json",
+      "asset_path": "data/item/wm-items.json",
+      "kv_key": "wm_items_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "drops-index",
+      "source_path": "data/item/drops-index.json",
+      "asset_path": "data/item/drops-index.json",
+      "required": true,
+      "delivery": "assets-only"
+    },
+    {
+      "id": "icon-index",
+      "source_path": "data/item/icon-index.json",
+      "asset_path": "data/item/icon-index.json",
+      "kv_key": "icon_index_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "item-names-zh",
+      "source_path": "data/item/item-names-zh.json",
+      "asset_path": "data/item/item-names-zh.json",
+      "kv_key": "item_names_zh_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "wm-zh-supplement",
+      "source_path": "data/item/wm-zh-supplement.json",
+      "asset_path": "data/item/wm-zh-supplement.json",
+      "kv_key": "wm_zh_supplement_json",
+      "required": true,
+      "delivery": "kv-and-assets",
+      "source_kind": "manually-maintained"
+    },
+    {
+      "id": "wiki-icon-harvest",
+      "source_path": "data/item/wiki-icon-harvest.json",
+      "asset_path": "data/item/wiki-icon-harvest.json",
+      "kv_key": "wiki_icon_harvest_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "item-i18n-harvest",
+      "source_path": "data/item/item-i18n-harvest.json",
+      "asset_path": "data/item/item-i18n-harvest.json",
+      "kv_key": "item_i18n_harvest_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "pinyin-map",
+      "source_path": "data/item/pinyin-map.json",
+      "asset_path": "data/item/pinyin-map.json",
+      "kv_key": "pinyin_map_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "auction-weapons-riven",
+      "source_path": "data/item/auction-dicts/auction-weapons-riven.json",
+      "asset_path": "data/item/auction-dicts/auction-weapons-riven.json",
+      "kv_key": "auction_weapons_riven_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "auction-attrs-riven",
+      "source_path": "data/item/auction-dicts/auction-attrs-riven.json",
+      "asset_path": "data/item/auction-dicts/auction-attrs-riven.json",
+      "kv_key": "auction_attrs_riven_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "auction-weapons-lich",
+      "source_path": "data/item/auction-dicts/auction-weapons-lich.json",
+      "asset_path": "data/item/auction-dicts/auction-weapons-lich.json",
+      "kv_key": "auction_weapons_lich_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "auction-weapons-sister",
+      "source_path": "data/item/auction-dicts/auction-weapons-sister.json",
+      "asset_path": "data/item/auction-dicts/auction-weapons-sister.json",
+      "kv_key": "auction_weapons_sister_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    },
+    {
+      "id": "icon-manifest",
+      "source_repository": "Ws-Web-assets",
+      "source_path": "manifest.json",
+      "asset_path": "manifest.json",
+      "kv_key": "manifest_json",
+      "required": true,
+      "delivery": "kv-and-assets"
+    }
+  ]
+}

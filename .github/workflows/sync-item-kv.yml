@@ -44,7 +44,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/item/ item-artifact-contract.json tools/ docs/ edgeone.json
+          git add data/item/ item-artifact-contract.json tools/sync_item_artifacts.py tools/validate_item_artifacts.py docs/item-data-release.md edgeone.json .gitignore
           if git diff --staged --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0

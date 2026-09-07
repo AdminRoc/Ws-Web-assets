@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "release_id": "08bba338dc492552ec03bc3e3bbea0f02c8e1c95",
-  "source_commit_at": "2026-09-07T08:16:22Z",
+  "release_id": "935db210ef3c1f1250f0143052fef00ac2789dc4",
+  "source_commit_at": "2026-09-07T08:51:35Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {
@@ -28,8 +28,8 @@
     },
     "item-names-zh": {
       "path": "data/item/item-names-zh.json",
-      "sha256": "879c7f0c84999a6ff3d507c89857d9e6091b5f8e9b609eb444bac7f08fd2fb6b",
-      "bytes": 4983,
+      "sha256": "4cb49f7ade0b43a978e8331dbe1459f2ed52fe34c61a03cf79153a3503269d7d",
+      "bytes": 4877,
       "delivery": "kv-and-assets",
       "kv_key": "item_names_zh_json"
     },
@@ -42,8 +42,8 @@
     },
     "wiki-icon-harvest": {
       "path": "data/item/wiki-icon-harvest.json",
-      "sha256": "2c5f87987f3340cba4d83fbb0ca61b5cacda3082c2b2d660ec791be2c07dd450",
-      "bytes": 53223,
+      "sha256": "ad8aa0c3c3d068096ecbceabeb07eae9ef506b6965bea2a409f22ae5bc83553e",
+      "bytes": 52720,
       "delivery": "kv-and-assets",
       "kv_key": "wiki_icon_harvest_json"
     },
@@ -56,8 +56,8 @@
     },
     "pinyin-map": {
       "path": "data/item/pinyin-map.json",
-      "sha256": "30b9ea8e197ab2433ec543f8d8e448262c01941257189a624f729e5109451b9c",
-      "bytes": 29041,
+      "sha256": "131c65cf5fdc1cbf405405fb456c39782c83b0875bd221e5bb246b76cbf114ef",
+      "bytes": 29040,
       "delivery": "kv-and-assets",
       "kv_key": "pinyin_map_json"
     },
@@ -91,8 +91,8 @@
     },
     "icon-manifest": {
       "path": "manifest.json",
-      "sha256": "986aae63446978248ef91e1bc0b23a4fa1010d9b842dc8a90d41dfa74841a8c8",
-      "bytes": 224649,
+      "sha256": "eab49f10c5a737867a6d9b67baeb72359c29571618242c65f8eb8b35d040082b",
+      "bytes": 220228,
       "delivery": "kv-and-assets",
       "kv_key": "manifest_json"
     }

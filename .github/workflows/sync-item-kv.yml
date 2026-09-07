@@ -60,7 +60,15 @@ jobs:
           set -euo pipefail
           test -n "${KV_WRITE_TOKEN}" || { echo "Missing KV_WRITE_TOKEN"; exit 1; }
           release="data/item/item-release.json"
+          marker="/tmp/item-release-meta.json"
           test -f "$release" || { echo "Missing item release metadata"; exit 1; }
+          python3 - "$release" "$marker" "$(git rev-parse HEAD)" <<'PY'
+          import json, pathlib, sys
+          source, target, assets_revision = sys.argv[1:]
+          release = json.loads(pathlib.Path(source).read_text(encoding='utf-8'))
+          release['assets_revision'] = assets_revision
+          pathlib.Path(target).write_text(json.dumps(release, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
           publish() {
             local key="$1"
             local file="$2"
@@ -103,4 +111,4 @@ jobs:
             publish "$key" "$file"
           done < /tmp/item-kv-list.tsv
           # Publish only after every required small artifact has been verified.
-          publish item_release_meta "$release"
+          publish item_release_meta "$marker"

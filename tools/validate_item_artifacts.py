@@ -10,6 +10,15 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def release_bytes(path):
+    # GitHub Actions publishes Linux LF bytes; local Windows worktrees may use CRLF.
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
+def release_digest(path):
+    return hashlib.sha256(release_bytes(path)).hexdigest()
+
+
 def parse_json(path):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -28,6 +37,8 @@ def main():
     source_root = Path(args.source_root).resolve()
     assets_root = Path(args.assets_root).resolve()
     contract = parse_json(assets_root / args.contract)
+    release = parse_json(assets_root / "data/item/item-release.json")
+    release_artifacts = release.get("artifacts", {})
     limit = int(contract["kv_value_limit_bytes"])
     report = {"schema_version": 1, "artifacts": [], "errors": []}
 
@@ -69,6 +80,12 @@ def main():
 
         if artifact["delivery"] in ("kv-and-assets", "assets-only") and not entry["asset_matches_source"]:
             report["errors"].append(f"{artifact['id']}: assets mirror missing or differs from source")
+
+        release_entry = release_artifacts.get(artifact["id"])
+        if not release_entry:
+            report["errors"].append(f"{artifact['id']}: missing release metadata")
+        elif not asset.is_file() or release_entry.get("sha256") != release_digest(asset) or release_entry.get("bytes") != len(release_bytes(asset)):
+            report["errors"].append(f"{artifact['id']}: release metadata differs from assets mirror")
         report["artifacts"].append(entry)
 
     text = json.dumps(report, ensure_ascii=False, indent=2) + "\n"

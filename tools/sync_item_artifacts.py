@@ -5,7 +5,6 @@ import hashlib
 import json
 import shutil
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -26,6 +25,15 @@ def source_revision(root):
         return "unknown"
 
 
+def source_revision_time(root):
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(root), "show", "-s", "--format=%cI", "HEAD"], text=True, timeout=10
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-root", required=True, help="Local Ws-Web root")
@@ -40,8 +48,9 @@ def main():
     release = {
         "schema_version": 1,
         "release_id": source_revision(source_root),
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source_commit_at": source_revision_time(source_root),
         "source_repository": contract["source_repository"],
+        "assets_release_path": "data/item/item-release.json",
         "artifacts": {},
     }
     changed = []

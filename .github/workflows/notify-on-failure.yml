@@ -16,6 +16,7 @@ on:
       - 生成拼音检索表
       - 补齐物品检索缺失缩略图
       - 信条/终幕武器轮换校准
+      - 同步完整物品发布到 EdgeOne KV
     types: [completed]
 
 permissions:

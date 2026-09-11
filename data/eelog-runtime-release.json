@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "assetsRevision": "5b06324ceee03f8a23cda93119554f23b290ecf7",
+  "assetsRevision": "7ba0b1e7a43bccdc26d46885c0534c185e3f957d",
   "artifacts": {
     "translationsScript": {
       "path": "js/wf-translations.js",
@@ -14,12 +14,12 @@
     },
     "arbBaselineSeed": {
       "path": "data/arbitration-metrics/arb-node-baseline.js",
-      "sha256": "304b39ded1f85cb45c3ce29ca42b3432d1d8210b460b02c01f4eae0acd89283e",
+      "sha256": "e809465be776d00d99bc40593b456eda119d9908033e67fef62e785624739929",
       "bytes": 6731
     },
     "arbBaselineJson": {
       "path": "data/arbitration-metrics/arb-node-baseline.json",
-      "sha256": "b5a98b9c381ac52565251e04ff48cd2f0c0fb4434d798d47d42ad88284bdc3d7",
+      "sha256": "8aea996a15bd619e1b34fe2888ceff92a191c1d23ed4eb6633ef4a672bd32ad1",
       "bytes": 6350
     }
   }

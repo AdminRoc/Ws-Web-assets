@@ -1,28 +1,28 @@
 {
   "schema_version": 1,
-  "release_id": "d4ada088fe6d64260433f8b1ad55ba1205ed5dc0",
-  "source_commit_at": "2026-09-14T03:01:04Z",
+  "release_id": "88ddc8bc0232162527dd8251d917cd1bb4ba93b8",
+  "source_commit_at": "2026-09-14T12:55:42Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {
     "wm-items": {
       "path": "data/item/wm-items.json",
-      "sha256": "b4809e3e9bfaa977bd84bda1730a503ddc992d0bb6db77ac7c0693716677ff9e",
+      "sha256": "0d2753e7fe5b041748914bb6ff2b4b7d27091ebd49a833b46e3b048ed23bfbf4",
       "bytes": 637847,
       "delivery": "kv-and-assets",
       "kv_key": "wm_items_json"
     },
     "drops-index": {
       "path": "data/item/drops-index.json",
-      "sha256": "38a4dfe85fcc0be7631a5e31edb8198b086ee286d64c410cce2eecf546550059",
+      "sha256": "2bd99b1bf19a0a702037b30f0f44a8a93e06d35eccde701f3a7f7290dad6e75d",
       "bytes": 4441180,
       "delivery": "assets-only",
       "kv_key": null
     },
     "icon-index": {
       "path": "data/item/icon-index.json",
-      "sha256": "068b000407d5a710ee400b9b9a546e7591142c273921438dee06e299dbcf77c4",
-      "bytes": 510334,
+      "sha256": "1a609e022d12b1bc74ad5f398c6d4de28bf93629e2e46051eaea5e488486248b",
+      "bytes": 510144,
       "delivery": "kv-and-assets",
       "kv_key": "icon_index_json"
     },
@@ -42,15 +42,15 @@
     },
     "wiki-icon-harvest": {
       "path": "data/item/wiki-icon-harvest.json",
-      "sha256": "ad8aa0c3c3d068096ecbceabeb07eae9ef506b6965bea2a409f22ae5bc83553e",
-      "bytes": 52720,
+      "sha256": "67174536bf249bc67afa8a422d7ffac65245efc0426788c19a804c027dd13454",
+      "bytes": 52487,
       "delivery": "kv-and-assets",
       "kv_key": "wiki_icon_harvest_json"
     },
     "item-i18n-harvest": {
       "path": "data/item/item-i18n-harvest.json",
-      "sha256": "b457b86229ba921d442f375c82949d9c578139b475dff4f53f012e2b2dca021b",
-      "bytes": 196372,
+      "sha256": "470366cf2ed22a3656898cc9832f24919a00de341cd3f624127bfeb048b90fb6",
+      "bytes": 216130,
       "delivery": "kv-and-assets",
       "kv_key": "item_i18n_harvest_json"
     },
@@ -63,28 +63,28 @@
     },
     "auction-weapons-riven": {
       "path": "data/item/auction-dicts/auction-weapons-riven.json",
-      "sha256": "d769047e6f9c69d1c5bbca3cce6199b249fd9413729a8d01c58af53cbdeeab56",
+      "sha256": "d1aeffbb34fa580b478619e55940a75011c0938e1810294c63492eed9af62e23",
       "bytes": 243439,
       "delivery": "kv-and-assets",
       "kv_key": "auction_weapons_riven_json"
     },
     "auction-attrs-riven": {
       "path": "data/item/auction-dicts/auction-attrs-riven.json",
-      "sha256": "37d9adcf5bc0142e09e8f05ac1aaf70952d942a4aa5957d2c6bb0dbd04be17e6",
+      "sha256": "9cd9b4cf92bb13e513dbe8c6e5f84a7501dd75ca5a54e34a98dad91a1825b028",
       "bytes": 13191,
       "delivery": "kv-and-assets",
       "kv_key": "auction_attrs_riven_json"
     },
     "auction-weapons-lich": {
       "path": "data/item/auction-dicts/auction-weapons-lich.json",
-      "sha256": "a2be585cf06dc01cb86a8517d53d54056f73e06399c701deee00c3d081838b18",
+      "sha256": "4db872235e738f9d6902664221e9678026250dd8d29bceaa2ba90ac799d1fb5b",
       "bytes": 11923,
       "delivery": "kv-and-assets",
       "kv_key": "auction_weapons_lich_json"
     },
     "auction-weapons-sister": {
       "path": "data/item/auction-dicts/auction-weapons-sister.json",
-      "sha256": "c064957edeea46ee1935e96f3be6a837c5ed74c78c4559fe0ce016f21d80888c",
+      "sha256": "57a63dab87cc760b9f9ae84ff00fe9c363ca1d55f9699de9c68b2096761a886b",
       "bytes": 7519,
       "delivery": "kv-and-assets",
       "kv_key": "auction_weapons_sister_json"

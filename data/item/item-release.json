@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "release_id": "d3da3b03c483ca40eb1fc9123e85fa0b89ed96ad",
-  "source_commit_at": "2026-09-15T00:11:25Z",
+  "release_id": "ae16241a752ab24809d3f5d723880a38befe217a",
+  "source_commit_at": "2026-09-15T06:08:45Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {
@@ -49,8 +49,8 @@
     },
     "item-i18n-harvest": {
       "path": "data/item/item-i18n-harvest.json",
-      "sha256": "470366cf2ed22a3656898cc9832f24919a00de341cd3f624127bfeb048b90fb6",
-      "bytes": 216130,
+      "sha256": "b457b86229ba921d442f375c82949d9c578139b475dff4f53f012e2b2dca021b",
+      "bytes": 196372,
       "delivery": "kv-and-assets",
       "kv_key": "item_i18n_harvest_json"
     },

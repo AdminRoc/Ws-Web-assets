@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "release_id": "787eacc42e2e4695aa6afdd2390f382a495cb4da",
-  "source_commit_at": "2026-09-20T03:01:18Z",
+  "release_id": "693f8e93696db2d01f8015b6d2bcb23b5a3aaaef",
+  "source_commit_at": "2026-09-20T11:30:45Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {
     "wm-items": {
       "path": "data/item/wm-items.json",
-      "sha256": "d7b27d90386d86fbbd0c4464099b3bf8937ae67d0a07b271342a21ebff8bc9f8",
+      "sha256": "5c5efa195e685bdd33eb9966aae60c94c69282442b765acdbc6ece8331abfd13",
       "bytes": 637847,
       "delivery": "kv-and-assets",
       "kv_key": "wm_items_json"
     },
     "drops-index": {
       "path": "data/item/drops-index.json",
-      "sha256": "fe38af4884e6fb08796dac14913bd6ca53d95074c3fa7c41d11327f8e2d125bd",
+      "sha256": "aed7ba400e4cb73155fcabe931675f320d46317f33637fd54b01d2a320fbefc8",
       "bytes": 4441180,
       "delivery": "assets-only",
       "kv_key": null

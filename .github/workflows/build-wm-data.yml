@@ -89,6 +89,7 @@ jobs:
               if previous == current:
                   path.write_bytes(original)
                   print(f'{path}: 内容未变化，保留原产物')
+          PY
 
       - name: 清理临时文件(不提交 HTML 原始件)
         run: rm -f droptables.html

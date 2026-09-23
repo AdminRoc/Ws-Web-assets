@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "release_id": "c06e7e3e974cbd6b224f0cadc2c1faa3625a5339",
-  "source_commit_at": "2026-09-23T16:42:06Z",
+  "release_id": "ccec7a4cdb75dd333e0f885e00770a074dec9057",
+  "source_commit_at": "2026-09-23T17:05:28Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {
     "wm-items": {
       "path": "data/item/wm-items.json",
-      "sha256": "4b623fc50908a792e80c892c61d233798c46c2be29795804ee6bef737bfbe636",
-      "bytes": 637847,
+      "sha256": "51687adcd0290ae7f0190254fc507678992634d01b97d4982eb1f2742a3642c2",
+      "bytes": 646153,
       "delivery": "kv-and-assets",
       "kv_key": "wm_items_json"
     },
     "drops-index": {
       "path": "data/item/drops-index.json",
-      "sha256": "dccdd0faf38f21d5b64fdb22812c5735a9abe87337763432fc905710dc019cc8",
-      "bytes": 4441180,
+      "sha256": "cbd55257cd282e931d918ae9745fdfe4409a835b286e3ff035ccea83007d6fe9",
+      "bytes": 4501516,
       "delivery": "assets-only",
       "kv_key": null
     },
@@ -42,15 +42,15 @@
     },
     "wiki-icon-harvest": {
       "path": "data/item/wiki-icon-harvest.json",
-      "sha256": "ca32c6b12a44492ad57dba733ebe42db109f9f018e9a3f90bf5e94f0dd1d16cd",
-      "bytes": 52726,
+      "sha256": "c9294681271e9852e988c86d9e91c712db7a6c9cee4218e7e91f1200053dc1ca",
+      "bytes": 52529,
       "delivery": "kv-and-assets",
       "kv_key": "wiki_icon_harvest_json"
     },
     "item-i18n-harvest": {
       "path": "data/item/item-i18n-harvest.json",
-      "sha256": "b457b86229ba921d442f375c82949d9c578139b475dff4f53f012e2b2dca021b",
-      "bytes": 196372,
+      "sha256": "62f389051bb51a68769344ff10f28b51d4fff2b20c8ceed6ed075701d09a42d7",
+      "bytes": 198404,
       "delivery": "kv-and-assets",
       "kv_key": "item_i18n_harvest_json"
     },

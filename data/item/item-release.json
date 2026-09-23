@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "release_id": "a170a8b94c3ae83a5b92616af9b12852734636c6",
-  "source_commit_at": "2026-09-22T20:47:43Z",
+  "release_id": "68649978feb57c948e9715adf9b2656bd30dc22d",
+  "source_commit_at": "2026-09-22T23:57:47Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {

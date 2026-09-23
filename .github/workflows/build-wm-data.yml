@@ -9,7 +9,7 @@ name: 构建物品检索数据(物品库+掉落反查)
 #
 # 定时触发由 GitHub 自带 schedule 负责（见下方 on.schedule；早期曾由 Cloudflare
 # Worker Cron Triggers 触发，2026-08-14 起统一使用 GitHub schedule）。
-# 物品库与掉落表变动不频繁,每天刷新一次足矣;脚本输出带时间戳,变化检测无实质变动时不提交,避免历史膨胀。
+# 新版本可能批量开放可交易物品；每 2 小时刷新以尽快收录，变化检测无实质变动时不提交。
 on:
   workflow_dispatch:
     inputs:
@@ -19,7 +19,7 @@ on:
         default: '0'
         type: string
   schedule:
-    - cron: '37 5 * * *'   # 每天 05:37 UTC 兜底(主触发仍由 Cloudflare cron 负责)
+    - cron: '37 */2 * * *'   # 每 2 小时 UTC 第 37 分，错开同仓库其他定时任务
 
 concurrency:
   group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞

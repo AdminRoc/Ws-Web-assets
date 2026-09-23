@@ -1,6 +1,6 @@
 name: 收割 WM 可交易物品中文译名
 
-# 每日从交易市场 v2 API 拉取 EN→ZH 映射，
+# 每 2 小时从交易市场 v2 API 拉取 EN→ZH 映射，
 # 合并进 data/item/item-i18n-harvest.json（条目优先覆盖同名 key）。
 # 脚本在私库，与其他 harvest-* 约定一致。
 
@@ -13,7 +13,7 @@ on:
         default: '0'
         type: string
   schedule:
-    - cron: '15 1 * * *'   # 每天 01:15 UTC（WM 译名周级变化，每日一次足够；2026-08-07 从每日 4 次降频）
+    - cron: '15 */2 * * *'   # 每 2 小时，与新版可交易物品收录节奏一致
 
 concurrency:
   group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞

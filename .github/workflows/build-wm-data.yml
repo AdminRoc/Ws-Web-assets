@@ -65,6 +65,31 @@ jobs:
           WM_ITEMS_JSON: data/item/wm-items.json
         run: python3 .github/scripts/build_drops_index.py
 
+      - name: 内容未变化时保留原产物
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          for name in ('wm-items.json', 'drops-index.json'):
+              path = Path('data/item') / name
+              try:
+                  original = subprocess.check_output(
+                      ['git', 'show', f'HEAD:{path.as_posix()}'], stderr=subprocess.DEVNULL
+                  )
+                  previous = json.loads(original)
+                  current = json.loads(path.read_text(encoding='utf-8'))
+              except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
+                  continue
+              if not isinstance(previous, dict) or not isinstance(current, dict):
+                  continue
+              previous.pop('generatedAt', None)
+              current.pop('generatedAt', None)
+              if previous == current:
+                  path.write_bytes(original)
+                  print(f'{path}: 内容未变化，保留原产物')
+
       - name: 清理临时文件(不提交 HTML 原始件)
         run: rm -f droptables.html
 

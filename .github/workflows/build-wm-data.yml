@@ -65,6 +65,27 @@ jobs:
           WM_ITEMS_JSON: data/item/wm-items.json
         run: python3 .github/scripts/build_drops_index.py
 
+      - name: 校验完整物品表与官方掉落索引
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+
+          current = json.loads(Path('data/item/wm-items.json').read_text(encoding='utf-8'))
+          previous = json.loads(subprocess.check_output(
+              ['git', 'show', 'HEAD:data/item/wm-items.json']))
+          slugs = [item.get('slug') for item in current.get('items', [])]
+          old_slugs = {item['slug'] for item in previous.get('items', [])}
+          if len(slugs) < 1500 or any(not slug for slug in slugs) or len(set(slugs)) != len(slugs):
+              raise SystemExit('WM item manifest incomplete or duplicated')
+          if old_slugs - set(slugs):
+              raise SystemExit('WM item manifest lost published slugs')
+          drops = json.loads(Path('data/item/drops-index.json').read_text(encoding='utf-8'))
+          if len(drops.get('items', {})) < 2000:
+              raise SystemExit('Official drop index incomplete')
+          print(f"Verified {len(slugs)} items and {len(drops['items'])} drop entries")
+          PY
+
       - name: 内容未变化时保留原产物
         run: |
           python3 - <<'PY'

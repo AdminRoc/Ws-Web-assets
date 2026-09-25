@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "release_id": "ca2ccead4c6ecc92fe229c799933bdfc354ce58d",
-  "source_commit_at": "2026-09-24T22:57:34Z",
+  "release_id": "82c4616e3764dd41b581caad36c7af3673113b22",
+  "source_commit_at": "2026-09-25T03:05:57Z",
   "source_repository": "Ws-Web",
   "assets_release_path": "data/item/item-release.json",
   "artifacts": {
@@ -91,8 +91,8 @@
     },
     "icon-manifest": {
       "path": "manifest.json",
-      "sha256": "bc8c40d92970866d7f7a363d2b7b1ca7e105bcc78e8048870f9a8088e2b647b4",
-      "bytes": 221299,
+      "sha256": "70e1f4f18d633a7ef77746b915d467966f9b1e51fa1e80722db33aa620abc93a",
+      "bytes": 221362,
       "delivery": "kv-and-assets",
       "kv_key": "manifest_json"
     }

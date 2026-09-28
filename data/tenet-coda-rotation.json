@@ -3,31 +3,31 @@
     "weapons": [
       {
         "name": "Tenet Ferrox",
-        "element": "Cold",
-        "bonusPct": 25.1
-      },
-      {
-        "name": "Tenet Grigori",
         "element": "Impact",
         "bonusPct": 25.2
       },
       {
+        "name": "Tenet Grigori",
+        "element": "Electricity",
+        "bonusPct": 38.6
+      },
+      {
         "name": "Tenet Livia",
-        "element": "Magnetic",
-        "bonusPct": 42.3
+        "element": "Radiation",
+        "bonusPct": 30.6
       },
       {
         "name": "Tenet Exec",
-        "element": "Cold",
-        "bonusPct": 25.1
+        "element": "Heat",
+        "bonusPct": 25.8
       },
       {
         "name": "Tenet Agendus",
-        "element": "Electricity",
-        "bonusPct": 26.2
+        "element": "Impact",
+        "bonusPct": 56.4
       }
     ],
-    "changedAt": 1790250778465
+    "changedAt": 1790604222230
   },
   "coda": {
     "batch": "B",
@@ -71,5 +71,5 @@
     "changedAt": 1790337361363
   },
   "source": "https://docs.google.com/spreadsheets/d/1hyWSyPqw1072vJR2eacYVcpBiL_cdL0E3MCs5Vb6s40",
-  "fetchedAt": "2026-09-27T12:08:09Z"
+  "fetchedAt": "2026-09-28T14:03:42Z"
 }

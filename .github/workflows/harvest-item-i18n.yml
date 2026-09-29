@@ -1,99 +1,18 @@
 name: 收割掉落表物品中文译名
 
-# item.html 的可搜索集合里，大量"掉落表专属"条目(资源/蓝图/遗物/源力石等)
-# 在 drops-index.json 里 zh 字段是空的，过去只能用英文搜到。本流程从官方游戏
-# 客户端本地化数据镜像批量收割这些
-# 条目的中文译名，写出 data/item/item-i18n-harvest.json，item.html 在 zh 字段为空时
-# 用它兜底，跟 wiki-icon-harvest.json 的接入方式完全一致。
-#
-# 收割脚本在私库(.github/scripts 整体 gitignore，与
-# harvest-calamity-i18n.yml / harvest-wiki-icons.yml / cache-item-icons.yml
-# 同一约定)；运行前 checkout 私库覆盖进工作树，只把收割出的数据文件提交回公库，
-# 私库脚本绝不提交回公库。
+# Compatibility entry point only. The append-only producer is owned by Ws-Web.
+# This workflow has no schedule and never checks out or writes Ws-Web artifacts.
 on:
   workflow_dispatch:
-    inputs:
-      retry_attempt:
-        description: Internal stale-producer retry marker
-        required: false
-        default: '0'
-        type: string
-  schedule:
-    - cron: '22 5 * * 1'   # 每周一，错开同仓库其他定时任务各自的刷新时间点
 
-concurrency:
-  group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
-  cancel-in-progress: false
+permissions:
+  contents: read
 
 jobs:
-  harvest:
+  dispatch:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
     steps:
-      - name: Checkout Ws-Web 公库
-        uses: actions/checkout@v5
-        with:
-          repository: AdminRoc/Ws-Web
-          ref: main
-          token: ${{ secrets.PRIVATE_REPO_PAT }}
-
-      - name: 拉取私库(收割脚本)
-        uses: actions/checkout@v5
-        with:
-          repository: AdminRoc/Ws-Web-core
-          ref: 17f4edb881ae478d93bf978824a1c0608bf8ba1b
-          token: ${{ secrets.PRIVATE_REPO_PAT }}
-          path: _private
-
-      - name: 覆盖私库脚本进工作树(不会被提交回公库)
-        run: |
-          mkdir -p .github/scripts
-          cp -a _private/.github/scripts/harvest_item_i18n.py _private/.github/scripts/verify_ws_web_target_revision.py .github/scripts/
-          rm -rf _private
-
-      - name: 收割中文译名
-        run: python3 .github/scripts/harvest_item_i18n.py
-
-      - name: 验证 Ws-Web target revision 未推进
+      - name: Dispatch the Ws-Web-owned translation producer
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)"
-
-      - name: 提交并推送(无变化时跳过)
-        id: commit
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/item/item-i18n-harvest.json
-          git diff --staged --quiet && { echo "无实质变动,跳过提交"; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; }
-          git commit -m "2026-07-08"
-          for i in 1 2 3 4 5; do
-            if git push; then echo "推送成功(第 $i 次)"; echo "pushed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
-            GH_TOKEN="${{ github.token }}" python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)" --allow-committed-head
-          done
-          echo "重试多次仍推送失败" >&2
-          exit 1
-
-      - name: 同步产物到 assets 镜像(world 等外部站点经 jsDelivr 引用)
-        if: steps.commit.outputs.pushed == 'true'
-        run: |
-          rm -rf /tmp/assets-mirror
-          git clone --depth 1 "https://x-access-token:${PRIVATE_REPO_PAT}@github.com/AdminRoc/Ws-Web-assets.git" /tmp/assets-mirror
-          mkdir -p /tmp/assets-mirror/data/item
-          cp data/item/item-i18n-harvest.json /tmp/assets-mirror/data/item/
-          cd /tmp/assets-mirror
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/item/item-i18n-harvest.json
-          git diff --staged --quiet && { echo "assets 镜像无变化"; exit 0; }
-          git commit -m "sync item-i18n-harvest $(date -u +%Y-%m-%d)"
-          for i in 1 2 3 4 5; do
-            if git push; then echo "assets 镜像同步成功"; exit 0; fi
-            git pull --rebase --autostash origin main || true
-          done
-          echo "assets 镜像同步失败" >&2; exit 1
-        env:
-          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
+          GH_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
+        run: gh workflow run .github/workflows/harvest-item-translations.yml --repo AdminRoc/Ws-Web --ref main

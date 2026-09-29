@@ -38,6 +38,43 @@ jobs:
           python3 tools/sync_item_artifacts.py --source-root _source
           python3 tools/validate_item_artifacts.py --source-root _source --report /tmp/item-artifact-report.json
 
+      - name: Verify deployed hash-aware item consumers before publication
+        env:
+          ITEM_SITE_ROOT: https://item.wfspeed.run
+        run: |
+          python3 - <<'PY'
+          import re
+          from urllib.parse import urljoin, urlparse
+          from urllib.request import urlopen
+          import os
+
+          root = os.environ['ITEM_SITE_ROOT'].rstrip('/') + '/'
+          pattern = re.compile(
+              r'<script\b[^>]*\bsrc=["\']([^"\']*js/item-release-loader\.js[^"\']*)["\']',
+              re.IGNORECASE,
+          )
+          script_urls = []
+          for page in ('index.html', 'item.html'):
+              with urlopen(urljoin(root, page), timeout=45) as response:
+                  body = response.read().decode('utf-8', errors='replace')
+              matches = pattern.findall(body)
+              if len(matches) != 1:
+                  raise SystemExit(f'{page} must load exactly one item release loader; refusing publication')
+              script_urls.append(urljoin(root, matches[0]))
+
+          if script_urls[0] != script_urls[1]:
+              raise SystemExit('Item pages reference different loader revisions; refusing publication')
+          parsed = urlparse(script_urls[0])
+          if parsed.scheme != 'https' or parsed.netloc != urlparse(root).netloc:
+              raise SystemExit('Item release loader must be served by the item site; refusing publication')
+          with urlopen(script_urls[0], timeout=45) as response:
+              loader = response.read().decode('utf-8', errors='replace')
+          for guard in ('release artifact hash mismatch', 'verified release hash unavailable'):
+              if guard not in loader:
+                  raise SystemExit(f'Production loader lacks required guard {guard!r}; refusing publication')
+          print('Both deployed item pages use the same hash- and release-guarded loader.')
+          PY
+
       - name: Commit complete public fallback mirror
         id: mirror
         run: |
@@ -73,6 +110,24 @@ jobs:
             local key="$1"
             local file="$2"
             local payload="/tmp/${key}.json"
+            local current status decision
+            current="$(mktemp)"
+            status="$(curl --silent --show-error --fail-with-body --retry 3 --max-time 60 \
+              --output "$current" --write-out '%{http_code}' \
+              "https://item.wfspeed.run/api/kv?key=${key}&v=preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" || true)"
+            if ! decision="$(python3 tools/item_kv_preflight.py "$status" "$current" "$file")"; then
+              rm -f "$current"
+              return 1
+            fi
+            rm -f "$current"
+            if [ "$decision" = "skip" ]; then
+              echo "KV value already matches source; skipped PUT: $key"
+              return 0
+            fi
+            if [ "$decision" != "publish" ]; then
+              echo "Unexpected KV preflight decision for $key" >&2
+              return 1
+            fi
             python3 - "$key" "$file" "$payload" <<'PY'
           import json, pathlib, sys
           key, source, target = sys.argv[1:]
@@ -89,10 +144,11 @@ jobs:
               -H "Authorization: Bearer ${KV_WRITE_TOKEN}" \
               -H "Content-Type: application/json" --data-binary "@$payload"
             python3 - "$key" "$file" <<'PY'
-          import hashlib, json, sys, urllib.request
+          import hashlib, json, sys, time, urllib.request
           key, source = sys.argv[1:]
           expected = open(source, 'rb').read()
-          with urllib.request.urlopen('https://item.wfspeed.run/api/kv?key=' + key, timeout=60) as response:
+          url = 'https://item.wfspeed.run/api/kv?key=' + key + '&v=' + str(time.time_ns())
+          with urllib.request.urlopen(url, timeout=60) as response:
               actual = response.read()
           json.loads(actual.decode('utf-8'))
           if hashlib.sha256(actual).digest() != hashlib.sha256(expected).digest():

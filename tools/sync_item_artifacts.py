@@ -3,7 +3,6 @@
 import argparse
 import hashlib
 import json
-import subprocess
 from pathlib import Path
 
 
@@ -16,22 +15,20 @@ def release_bytes(path):
     return path.read_bytes().replace(b"\r\n", b"\n")
 
 
-def source_revision(root):
-    try:
-        return subprocess.check_output(
-            ["git", "-C", str(root), "rev-parse", "HEAD"], text=True, timeout=10
-        ).strip()
-    except (OSError, subprocess.SubprocessError):
-        return "unknown"
-
-
-def source_revision_time(root):
-    try:
-        return subprocess.check_output(
-            ["git", "-C", str(root), "show", "-s", "--format=%cI", "HEAD"], text=True, timeout=10
-        ).strip()
-    except (OSError, subprocess.SubprocessError):
-        return "unknown"
+def release_identifier(release):
+    """Identify the declared artifact bytes, not unrelated source-repository commits."""
+    identity = {
+        "schema_version": release["schema_version"],
+        "source_repository": release["source_repository"],
+        "assets_release_path": release["assets_release_path"],
+        "artifacts": release["artifacts"],
+    }
+    payload = json.dumps(
+        identity, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    # The browser contract currently accepts a 40-hex release id. Keep that shape
+    # while deriving it from the SHA-256 digest of the complete artifact manifest.
+    return hashlib.sha256(payload).hexdigest()[:40]
 
 
 def main():
@@ -47,8 +44,6 @@ def main():
     contract = read_json(assets_root / args.contract)
     release = {
         "schema_version": 1,
-        "release_id": source_revision(source_root),
-        "source_commit_at": source_revision_time(source_root),
         "source_repository": contract["source_repository"],
         "assets_release_path": "data/item/item-release.json",
         "artifacts": {},
@@ -79,6 +74,7 @@ def main():
             "kv_key": artifact.get("kv_key"),
         }
 
+    release["release_id"] = release_identifier(release)
     release_path = assets_root / "data/item/item-release.json"
     release_text = (json.dumps(release, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     if not release_path.is_file() or release_bytes(release_path) != release_text:

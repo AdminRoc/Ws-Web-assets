@@ -64,8 +64,6 @@ class SyncItemArtifactsTests(unittest.TestCase):
         canonical = payload.replace(b"\r\n", b"\n")
         release = {
             "schema_version": 1,
-            "release_id": "unknown",
-            "source_commit_at": "unknown",
             "source_repository": "Ws-Web",
             "assets_release_path": "data/item/item-release.json",
             "artifacts": {
@@ -78,6 +76,16 @@ class SyncItemArtifactsTests(unittest.TestCase):
                 }
             },
         }
+        identity = {
+            "schema_version": release["schema_version"],
+            "source_repository": release["source_repository"],
+            "assets_release_path": release["assets_release_path"],
+            "artifacts": release["artifacts"],
+        }
+        fingerprint = json.dumps(
+            identity, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        release["release_id"] = hashlib.sha256(fingerprint).hexdigest()[:40]
         self.release_file.write_text(json.dumps(release, indent=2) + "\n", encoding="utf-8")
 
     def test_windows_newlines_do_not_create_false_dry_run_diff(self):
@@ -102,6 +110,8 @@ class SyncItemArtifactsTests(unittest.TestCase):
         release = json.loads(self.release_file.read_text(encoding="utf-8"))
         self.assertEqual(release["artifacts"]["sample"]["sha256"], self.release_digest(source_payload))
         self.assertEqual(release["artifacts"]["sample"]["bytes"], len(canonical))
+        self.assertRegex(release["release_id"], r"^[0-9a-f]{40}$")
+        self.assertNotIn("source_commit_at", release)
         result = subprocess.run(
             [
                 sys.executable,
@@ -118,6 +128,22 @@ class SyncItemArtifactsTests(unittest.TestCase):
         report = json.loads(result.stdout)
         self.assertEqual(report["errors"], [])
         self.assertTrue(report["artifacts"][0]["asset_matches_source"])
+
+    def test_unrelated_source_file_does_not_create_a_new_artifact_release(self):
+        payload = b'{"items": [1, 2]}\n'
+        self.source_file.write_bytes(payload)
+        self.asset_file.write_bytes(payload)
+        self.run_sync()
+        release_id = json.loads(self.release_file.read_text(encoding="utf-8"))["release_id"]
+
+        (self.source / "README.md").write_text("Workflow-only source change\n", encoding="utf-8")
+        result = self.run_sync(dry_run=True)
+
+        self.assertEqual(json.loads(result.stdout)["changed"], [])
+        self.assertEqual(
+            json.loads(self.release_file.read_text(encoding="utf-8"))["release_id"],
+            release_id,
+        )
 
 
 if __name__ == "__main__":

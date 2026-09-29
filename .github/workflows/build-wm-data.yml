@@ -96,6 +96,10 @@ jobs:
           import json
           from pathlib import Path
           import subprocess
+          import sys
+
+          sys.path.insert(0, '.github/scripts')
+          from wm_item_identity_guard import validate_stable_id_continuity
 
           wm = json.loads(Path('data/item/wm-items.json').read_text(encoding='utf-8'))
           items = wm.get('items') if isinstance(wm, dict) else None

@@ -3,7 +3,6 @@
 import argparse
 import hashlib
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -12,8 +11,9 @@ def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def release_bytes(path):
+    """Use the bytes GitHub Actions commits, independent of Windows checkout EOLs."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
 
 
 def source_revision(root):
@@ -62,29 +62,30 @@ def main():
         target = assets_root / artifact["asset_path"]
         if not source.is_file():
             raise SystemExit(f"missing required source: {source}")
-        read_json(source)
-        digest = sha256(source)
+        payload = release_bytes(source)
+        json.loads(payload.decode("utf-8"))
+        digest = hashlib.sha256(payload).hexdigest()
         if artifact["delivery"] in ("kv-and-assets", "assets-only"):
             target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.is_file() or sha256(target) != digest:
+            if not target.is_file() or release_bytes(target) != payload:
                 changed.append(str(target.relative_to(assets_root)))
                 if not args.dry_run:
-                    shutil.copy2(source, target)
+                    target.write_bytes(payload)
         release["artifacts"][artifact["id"]] = {
             "path": artifact["asset_path"],
             "sha256": digest,
-            "bytes": source.stat().st_size,
+            "bytes": len(payload),
             "delivery": artifact["delivery"],
             "kv_key": artifact.get("kv_key"),
         }
 
     release_path = assets_root / "data/item/item-release.json"
-    release_text = json.dumps(release, ensure_ascii=False, indent=2) + "\n"
-    if not release_path.is_file() or release_path.read_text(encoding="utf-8") != release_text:
+    release_text = (json.dumps(release, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    if not release_path.is_file() or release_bytes(release_path) != release_text:
         changed.append(str(release_path.relative_to(assets_root)))
         if not args.dry_run:
             release_path.parent.mkdir(parents=True, exist_ok=True)
-            release_path.write_text(release_text, encoding="utf-8")
+            release_path.write_bytes(release_text)
 
     print(json.dumps({"dry_run": args.dry_run, "release_id": release["release_id"], "changed": changed}, ensure_ascii=False, indent=2))
 

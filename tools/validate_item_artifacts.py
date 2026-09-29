@@ -6,10 +6,6 @@ import json
 from pathlib import Path
 
 
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def release_bytes(path):
     # GitHub Actions publishes Linux LF bytes; local Windows worktrees may use CRLF.
     return path.read_bytes().replace(b"\r\n", b"\n")
@@ -62,11 +58,12 @@ def main():
             report["artifacts"].append(entry)
             continue
 
-        entry["bytes"] = source.stat().st_size
-        entry["sha256"] = digest(source)
+        source_release_bytes = release_bytes(source)
+        entry["bytes"] = len(source_release_bytes)
+        entry["sha256"] = hashlib.sha256(source_release_bytes).hexdigest()
         entry["delivery"] = artifact["delivery"]
         entry["asset_present"] = asset.is_file()
-        entry["asset_matches_source"] = asset.is_file() and digest(asset) == entry["sha256"]
+        entry["asset_matches_source"] = asset.is_file() and release_bytes(asset) == source_release_bytes
 
         key = artifact.get("kv_key")
         if key:

@@ -1,18 +1,111 @@
 name: 收割 WM 可交易物品中文译名
 
-# Compatibility entry point only. The stable-ID joined producer is owned by Ws-Web.
-# This workflow has no schedule and never checks out or writes Ws-Web artifacts.
+# Public, append-only translation producer for the contracted Ws-Web item artifact.
 on:
   workflow_dispatch:
+    inputs:
+      retry_attempt:
+        description: Internal stale-producer retry marker
+        required: false
+        default: '0'
+        type: string
+  schedule:
+    - cron: '15 */2 * * *'
+    - cron: '22 5 * * 1'
+
+concurrency:
+  group: ws-web-batch-lock
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  dispatch:
+  harvest:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - name: Dispatch the Ws-Web-owned translation producer
+      - name: Checkout Ws-Web-assets
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build and publish only the contracted translation source to Ws-Web
         env:
+          SCHEDULE: ${{ github.event.schedule || '' }}
           GH_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
-        run: gh workflow run .github/workflows/harvest-item-translations.yml --repo AdminRoc/Ws-Web --ref main
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+
+          git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web.git _ws_web
+          git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web-core.git _private
+          git -C _private fetch --quiet --depth=1 origin 3606522cea52b15ee028bfb35de0d98e4892c054
+          git -C _private checkout --quiet --detach FETCH_HEAD
+          test "$(git -C _private rev-parse HEAD)" = 3606522cea52b15ee028bfb35de0d98e4892c054
+
+          python3 -m unittest discover -s _private/tests -p 'test_harvest_wm_items_i18n.py' -v
+          python3 -m unittest discover -s _private/tests -p 'test_translation_output.py' -v
+          mkdir -p _ws_web/.github/scripts
+          cp _private/.github/scripts/harvest_wm_items_i18n.py \
+            _private/.github/scripts/harvest_item_i18n.py \
+            _private/.github/scripts/translation_output.py \
+            _private/.github/scripts/verify_ws_web_target_revision.py \
+            _ws_web/.github/scripts/
+
+          cd _ws_web
+          base="$(git rev-parse HEAD)"
+          if [[ "$GITHUB_EVENT_NAME" != 'schedule' || "$SCHEDULE" == '15 */2 * * *' || "$SCHEDULE" == '22 5 * * 1' ]]; then
+            python3 .github/scripts/harvest_wm_items_i18n.py
+          fi
+          if [[ "$GITHUB_EVENT_NAME" != 'schedule' || "$SCHEDULE" == '22 5 * * 1' ]]; then
+            python3 .github/scripts/harvest_item_i18n.py
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          path = Path('data/item/item-i18n-harvest.json')
+          original = subprocess.check_output(
+              ['git', 'show', f'HEAD:{path.as_posix()}'], stderr=subprocess.DEVNULL
+          )
+          previous = json.loads(original)
+          current = json.loads(path.read_text(encoding='utf-8'))
+          if not isinstance(previous, dict) or not isinstance(current, dict):
+              raise SystemExit('Translation source must remain an object map')
+          removed = previous.keys() - current.keys()
+          invalid = [key for key, value in current.items()
+                     if not isinstance(key, str) or not key.strip()
+                     or not isinstance(value, str) or not value.strip()]
+          if removed:
+              raise SystemExit(f'Refusing to publish {len(removed)} removed translation keys')
+          if invalid:
+              raise SystemExit(f'Refusing to publish {len(invalid)} malformed translation rows')
+          if previous == current:
+              path.write_bytes(original)
+              print('No semantic translation change; retained existing bytes.')
+          else:
+              print(f'Validated {len(current)} translations; retained all {len(previous)} previous keys')
+          PY
+
+          python3 .github/scripts/verify_ws_web_target_revision.py "$base"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -- data/item/item-i18n-harvest.json
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No translation changes; keeping the published revision.'
+            exit 0
+          fi
+          git commit -m 'data: refresh item translations'
+          if ! git push origin HEAD:main; then
+            python3 .github/scripts/verify_ws_web_target_revision.py "$base" --allow-committed-head
+            echo 'Failed to push generated translations; no stale output was published.' >&2
+            exit 1
+          fi
+          gh workflow run .github/workflows/sync-item-kv.yml --repo AdminRoc/Ws-Web-assets --ref main

@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: AdminRoc/Ws-Web-core
-          ref: 17f4edb881ae478d93bf978824a1c0608bf8ba1b
+          ref: 3606522cea52b15ee028bfb35de0d98e4892c054
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           path: _private
 
@@ -63,16 +63,22 @@ jobs:
         run: python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)"
 
       - name: 提交并推送(无变化时跳过)
+        id: commit
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/item/pinyin-map.json
-          git diff --staged --quiet && { echo "无实质变动,跳过提交"; exit 0; }
-          git commit -m "2026-07-08"
-          for i in 1 2 3 4 5; do
-            if git push; then echo "推送成功(第 $i 次)"; exit 0; fi
-            echo "推送被拒(第 $i 次),拉取远端后 rebase 重试..."
-            GH_TOKEN="${{ github.token }}" python3 .github/scripts/verify_ws_web_target_revision.py "$(git rev-parse HEAD)" --allow-committed-head
-          done
-          echo "重试多次仍推送失败" >&2
-          exit 1
+          if git diff --staged --quiet; then
+            echo "无实质变动,跳过提交"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "data: refresh pinyin search map"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch the contract item release publisher
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run .github/workflows/sync-item-kv.yml --repo AdminRoc/Ws-Web-assets --ref main

@@ -1,7 +1,7 @@
 name: 收割掉落表物品中文译名
 
-# Compatibility entry point only. The append-only producer is owned by Ws-Web.
-# This workflow has no schedule and never checks out or writes Ws-Web artifacts.
+# Manual compatibility alias. The unified public translation producer owns the schedule.
+# This entry point does not check out or write Ws-Web artifacts itself.
 on:
   workflow_dispatch:
 
@@ -15,4 +15,4 @@ jobs:
       - name: Dispatch the Ws-Web-owned translation producer
         env:
           GH_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
-        run: gh workflow run .github/workflows/harvest-item-translations.yml --repo AdminRoc/Ws-Web --ref main
+        run: gh workflow run .github/workflows/harvest-wm-items-i18n.yml --repo AdminRoc/Ws-Web-assets --ref main

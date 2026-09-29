@@ -1,0 +1,60 @@
+name: Verify main-site item artifact release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Ws-Web commit whose item artifacts were just published
+        required: true
+        type: string
+      wm_sha256:
+        description: SHA-256 of the committed wm-items.json
+        required: true
+        type: string
+      wm_bytes:
+        description: Byte length of the committed wm-items.json
+        required: true
+        type: string
+      drops_sha256:
+        description: SHA-256 of the committed drops-index.json
+        required: true
+        type: string
+      drops_bytes:
+        description: Byte length of the committed drops-index.json
+        required: true
+        type: string
+
+concurrency:
+  group: wfspeed-main-public-item-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout Ws-Web-assets verifier
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Wait out the main-site cache window and verify exact public bytes
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          WM_SHA256: ${{ inputs.wm_sha256 }}
+          WM_BYTES: ${{ inputs.wm_bytes }}
+          DROPS_SHA256: ${{ inputs.drops_sha256 }}
+          DROPS_BYTES: ${{ inputs.drops_bytes }}
+        run: >-
+          python3 .github/scripts/verify_main_site_item_release.py
+          --source-sha "$SOURCE_SHA"
+          --wm-sha256 "$WM_SHA256"
+          --wm-bytes "$WM_BYTES"
+          --drops-sha256 "$DROPS_SHA256"
+          --drops-bytes "$DROPS_BYTES"

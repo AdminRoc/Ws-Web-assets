@@ -1,18 +1,138 @@
 name: 构建物品检索数据(物品库+掉落反查)
 
-# Compatibility entry point only. Source production now belongs to Ws-Web.
-# This workflow never checks out or writes Ws-Web artifacts.
+# Public producer for the two item artifacts declared by item-artifact-contract.json.
+# It may write only these paths in Ws-Web; all other Ws-Web data is out of scope.
 on:
   workflow_dispatch:
+    inputs:
+      retry_attempt:
+        description: Internal stale-producer retry marker
+        required: false
+        default: '0'
+        type: string
+  schedule:
+    - cron: '37 */2 * * *'
+
+concurrency:
+  group: ws-web-batch-lock
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  dispatch:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - name: Dispatch the Ws-Web-owned item producer
+      - name: Checkout Ws-Web-assets
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build and publish only the contracted item sources to Ws-Web
         env:
           GH_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
-        run: gh workflow run .github/workflows/build-item-data.yml --repo AdminRoc/Ws-Web --ref main
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+
+          git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web.git _ws_web
+          git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web-core.git _private
+          git -C _private fetch --quiet --depth=1 origin 3606522cea52b15ee028bfb35de0d98e4892c054
+          git -C _private checkout --quiet --detach FETCH_HEAD
+          test "$(git -C _private rev-parse HEAD)" = 3606522cea52b15ee028bfb35de0d98e4892c054
+
+          python3 -m unittest discover -s _private/tests -p 'test_build_*.py' -v
+          curl --fail --show-error --location --retry 3 --retry-all-errors \
+            --connect-timeout 15 --max-time 60 --output "$RUNNER_TEMP/droptables.html" \
+            'https://www.warframe.com/droptables'
+          test -s "$RUNNER_TEMP/droptables.html"
+
+          mkdir -p _ws_web/.github/scripts
+          cp _private/.github/scripts/build_wm_items.py \
+            _private/.github/scripts/build_drops_index.py \
+            _private/.github/scripts/verify_ws_web_target_revision.py \
+            _ws_web/.github/scripts/
+          cd _ws_web
+          base="$(git rev-parse HEAD)"
+          python3 .github/scripts/build_wm_items.py
+          DROPTABLE_HTML="$RUNNER_TEMP/droptables.html" \
+            WM_ITEMS_JSON=data/item/wm-items.json \
+            DROPS_OUT=data/item/drops-index.json \
+            python3 .github/scripts/build_drops_index.py
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          for name in ('wm-items.json', 'drops-index.json'):
+              path = Path('data/item') / name
+              original = subprocess.check_output(
+                  ['git', 'show', f'HEAD:{path.as_posix()}'], stderr=subprocess.DEVNULL
+              )
+              previous = json.loads(original)
+              current = json.loads(path.read_text(encoding='utf-8'))
+              previous.pop('generatedAt', None)
+              current.pop('generatedAt', None)
+              if previous == current:
+                  path.write_bytes(original)
+                  print(f'{path}: unchanged; retained existing bytes')
+          PY
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          wm = json.loads(Path('data/item/wm-items.json').read_text(encoding='utf-8'))
+          items = wm.get('items') if isinstance(wm, dict) else None
+          if not isinstance(items, list) or wm.get('count') != len(items) or len(items) < 1500:
+              raise SystemExit('WM item manifest count is invalid or below the safety minimum')
+          ids = [row.get('id') for row in items if isinstance(row, dict)]
+          slugs = [row.get('slug') for row in items if isinstance(row, dict)]
+          names = [row.get('en') for row in items if isinstance(row, dict)]
+          if len(ids) != len(items) or any(not isinstance(value, str) or not value for value in ids):
+              raise SystemExit('WM item manifest has missing or malformed stable IDs')
+          if len(set(ids)) != len(ids):
+              raise SystemExit('WM item manifest has duplicate stable IDs')
+          if any(not isinstance(value, str) or not value for value in slugs) or len(set(slugs)) != len(slugs):
+              raise SystemExit('WM item manifest has missing or duplicate slugs')
+          if any(not isinstance(value, str) or not value.strip() for value in names):
+              raise SystemExit('WM item manifest has missing English item names')
+
+          drops = json.loads(Path('data/item/drops-index.json').read_text(encoding='utf-8'))
+          drop_items = drops.get('items') if isinstance(drops, dict) else None
+          if not isinstance(drop_items, dict) or drops.get('count') != len(drop_items) or len(drop_items) < 2000:
+              raise SystemExit('Official drop index count is invalid or below the safety minimum')
+          print(f'Validated {len(items)} stable WM items and {len(drop_items)} drop-index entries')
+          PY
+
+          python3 .github/scripts/verify_ws_web_target_revision.py "$base"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -- data/item/wm-items.json data/item/drops-index.json
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No semantic item-source changes; keeping the published revision.'
+            exit 0
+          fi
+          git commit -m 'data: refresh item catalog and drop index'
+          if ! git push origin HEAD:main; then
+            python3 .github/scripts/verify_ws_web_target_revision.py "$base" --allow-committed-head
+            echo 'Failed to push generated item sources; no stale output was published.' >&2
+            exit 1
+          fi
+          gh workflow run .github/workflows/sync-item-kv.yml --repo AdminRoc/Ws-Web-assets --ref main
+          wm_sha="$(sha256sum data/item/wm-items.json | cut -d ' ' -f 1)"
+          wm_bytes="$(wc -c < data/item/wm-items.json | tr -d '[:space:]')"
+          drops_sha="$(sha256sum data/item/drops-index.json | cut -d ' ' -f 1)"
+          drops_bytes="$(wc -c < data/item/drops-index.json | tr -d '[:space:]')"
+          gh workflow run .github/workflows/verify-public-item-release.yml \
+            --repo AdminRoc/Ws-Web-assets --ref main \
+            -f source_sha="$(git rev-parse HEAD)" \
+            -f wm_sha256="$wm_sha" -f wm_bytes="$wm_bytes" \
+            -f drops_sha256="$drops_sha" -f drops_bytes="$drops_bytes"

@@ -7,6 +7,8 @@
 
 The contract is declared in `item-artifact-contract.json`. It is intentionally read-only during this preparation phase. The validator compares the private `Ws-Web` item artifacts with the public `Ws-Web-assets` mirror and reports missing files, JSON errors, hash mismatches, duplicate keys, and values that exceed the documented 1 MB EdgeOne KV limit.
 
+The produced `data/item/wm-items.json` includes Warframe.market's unique `id`. That `id` is the cross-run identity; `slug` is a mutable URL label and may change. A one-time migration from pre-ID artifacts accepts only a unique exact English-name match. Normal item order requests should use `/v2/orders/itemId/{id}`; keep `slug` for display and outbound market links.
+
 Run locally from `Ws-Web-assets`:
 
 ```powershell

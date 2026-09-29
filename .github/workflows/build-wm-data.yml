@@ -1,7 +1,7 @@
 name: 构建物品检索数据(物品库+掉落反查)
 
 # 为"物品检索"页面(item.html)按周期生成两份静态数据并缓存进公库：
-#   data/item/wm-items.json    —— 公共网络抓取的公开交易数据源里的全部可交易物品(中/英名/slug/图标/ducats)
+#   data/item/wm-items.json    —— 公共网络抓取的公开交易数据源里的全部可交易物品(id/中英名/slug/图标/ducats)
 #   data/item/drops-index.json —— 由公开掉落数据源(官方掉落表)解析出的"物品->掉落来源"反查索引,
 #                            物品中文名取自上面的物品库
 # 抓取/解析脚本在私库;运行前 checkout 私库覆盖进工作树,
@@ -31,6 +31,7 @@ jobs:
     permissions:
       contents: write
       actions: write
+      issues: write
     steps:
       - name: Checkout Ws-Web 公库
         uses: actions/checkout@v5
@@ -43,9 +44,12 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: AdminRoc/Ws-Web-core
-          ref: 17f4edb881ae478d93bf978824a1c0608bf8ba1b
+          ref: a9728d21e739d963c352c27b4353f8722af276f1
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           path: _private
+
+      - name: 测试私库物品身份校验
+        run: python3 -m unittest discover -s _private/tests -p 'test_build_wm_items.py' -v
 
       - name: 覆盖私库脚本进工作树(不会被提交回公库)
         run: |
@@ -68,18 +72,19 @@ jobs:
       - name: 校验完整物品表与官方掉落索引
         run: |
           python3 - <<'PY'
-          import json, subprocess
+          import json
           from pathlib import Path
 
           current = json.loads(Path('data/item/wm-items.json').read_text(encoding='utf-8'))
-          previous = json.loads(subprocess.check_output(
-              ['git', 'show', 'HEAD:data/item/wm-items.json']))
-          slugs = [item.get('slug') for item in current.get('items', [])]
-          old_slugs = {item['slug'] for item in previous.get('items', [])}
-          if len(slugs) < 1500 or any(not slug for slug in slugs) or len(set(slugs)) != len(slugs):
+          items = current.get('items', [])
+          if not isinstance(items, list) or current.get('count') != len(items):
+              raise SystemExit('WM item manifest count mismatch')
+          ids = [item.get('id') for item in items]
+          slugs = [item.get('slug') for item in items]
+          if len(items) < 1500 or any(not item_id for item_id in ids) or len(set(ids)) != len(ids):
+              raise SystemExit('WM item manifest has missing or duplicate stable ids')
+          if any(not slug for slug in slugs) or len(set(slugs)) != len(slugs):
               raise SystemExit('WM item manifest incomplete or duplicated')
-          if old_slugs - set(slugs):
-              raise SystemExit('WM item manifest lost published slugs')
           drops = json.loads(Path('data/item/drops-index.json').read_text(encoding='utf-8'))
           if len(drops.get('items', {})) < 2000:
               raise SystemExit('Official drop index incomplete')
@@ -161,6 +166,12 @@ jobs:
         env:
           PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
 
+      - name: 触发完整 ITEM_KV 发布与回读校验
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run .github/workflows/sync-item-kv.yml --repo AdminRoc/Ws-Web-assets --ref main
+
       - name: 刷新腾讯云 CDN 缓存(让刚更新的数据立刻生效,不等缓存自然过期)
         if: steps.commit.outputs.pushed == 'true'
         env:
@@ -171,3 +182,30 @@ jobs:
           python3 .github/scripts/purge_tencent_cdn.py \
             "https://wfspeed.run/data/item/wm-items.json" \
             "https://wfspeed.run/data/item/drops-index.json"
+
+      - name: 报告生产工作流失败
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = '⚠️ 物品检索数据生产链失败';
+            const body = `本次物品目录生成、Ws-Web 提交、Assets 镜像、ITEM_KV 发布或 CDN 刷新环节失败。\n\n` +
+              `- 运行记录：${runUrl}\n- 触发方式：${context.eventName}\n- 分支：${context.ref}\n- 提交：${context.sha}\n\n` +
+              '请先查看失败步骤，再确认 Ws-Web 产物、Assets 镜像与 ITEM_KV release marker 是否仍指向最后一次成功版本。';
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'ci-failure', per_page: 100,
+            });
+            const issue = existing.data.find(item => item.title === title);
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['ci-failure'],
+              });
+            }

@@ -16,15 +16,15 @@ def item(item_id, slug, name=None):
 
 
 class WmItemIdentityGuardTests(unittest.TestCase):
-    def test_corrected_o7_slug_is_allowed_only_with_the_same_stable_id(self):
-        previous = manifest([item("68add9961027572e028db6c9", "axi_o7_relic", "Axi Y2 Relic")])
-        current = manifest([item("68add9961027572e028db6c9", "axi_y2_relic", "Axi Y2 Relic")])
+    def test_slug_change_is_allowed_only_with_the_same_stable_id(self):
+        previous = manifest([item("stable-item-id", "old_slug", "Synthetic Item")])
+        current = manifest([item("stable-item-id", "new_slug", "Synthetic Item")])
 
         self.assertEqual(validate_stable_id_continuity(previous, current, minimum=1), 1)
 
     def test_same_name_with_a_different_stable_id_is_not_a_rename(self):
-        previous = manifest([item("old-id", "axi_o7_relic", "Axi Y2 Relic")])
-        current = manifest([item("new-id", "axi_y2_relic", "Axi Y2 Relic")])
+        previous = manifest([item("old-id", "old_slug", "Synthetic Item")])
+        current = manifest([item("new-id", "new_slug", "Synthetic Item")])
 
         with self.assertRaisesRegex(ValueError, "lost 1 previously published stable IDs"):
             validate_stable_id_continuity(previous, current, minimum=1)

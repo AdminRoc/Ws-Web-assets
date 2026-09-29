@@ -95,6 +95,7 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
+          import subprocess
 
           wm = json.loads(Path('data/item/wm-items.json').read_text(encoding='utf-8'))
           items = wm.get('items') if isinstance(wm, dict) else None

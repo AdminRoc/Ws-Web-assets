@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: AdminRoc/Ws-Web-core
-          ref: 6f986b019e7949d15a0a59aa927ff05831662f09
+          ref: 6f986b0ac647a459ee2a7454d724ddc32dd1bcaf
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           path: .runtime-core
 

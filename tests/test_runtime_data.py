@@ -47,6 +47,8 @@ class RuntimeDataContractTests(unittest.TestCase):
 
     def test_release_workflow_passes_inputs_to_repeated_validation_gates(self):
         workflow = (runtime_data.ROOT / ".github/workflows/publish-runtime-data.yml").read_text(encoding="utf-8")
+        self.assertIn("- cron: '7 */2 * * *'", workflow)
+        self.assertIn("'7 */2 * * *') target=baseline ;;", workflow)
         self.assertIn(
             'python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core '
             '--item-names "$ITEM_NAMES_PATH" --check-staged',

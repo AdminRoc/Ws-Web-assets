@@ -18,7 +18,8 @@ on:
       - 手动生成物品中文名补充字典
     types: [completed]
   schedule:
-    - cron: '0 */2 * * *'
+    # Offset from the top of the hour to reduce schedule delay/drop risk.
+    - cron: '7 */2 * * *'
     - cron: '17 4 * * *'
     - cron: '17 6 * * *'
 
@@ -75,7 +76,7 @@ jobs:
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             case "$SCHEDULE" in
-              '0 */2 * * *') target=baseline ;;
+              '7 */2 * * *') target=baseline ;;
               '17 4 * * *') target=translations ;;
               '17 6 * * *') target=rotation ;;
               *) echo "Unknown runtime-data schedule; refusing to publish" >&2; exit 1 ;;

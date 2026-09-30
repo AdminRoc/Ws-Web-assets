@@ -8,9 +8,11 @@
 
 | Family | UTC schedule | Outputs | Main consumers |
 | --- | --- | --- | --- |
-| Arbitration baseline | `0 */2 * * *` | JSON plus matching embedded JS seed | Ws-Web-eelog runtime release |
+| Arbitration baseline | `7 */2 * * *` | JSON plus matching embedded JS seed | Ws-Web-eelog runtime release |
 | Shared translations | `17 4 * * *` | translation JS, unified i18n JSON, Chinese SolNode dictionary | Ws-Web-world and Ws-Web-eelog |
 | Tenet/Coda rotation | `17 6 * * *` | rotation JSON | Ws-Web-world |
+
+The baseline schedule is intentionally offset from minute 00 because [GitHub documents](https://docs.github.com/en/actions/how-tos/troubleshoot-workflows) that scheduled events can be delayed or dropped during high load, especially at the start of an hour. Its cadence remains every two hours; only the trigger minute changed.
 
 Manual dispatch accepts `all` or one family. The existing request URLs, headers, cadence inside each producer, and source-specific parsing remain in the pinned Core scripts; this migration does not alter Warframe.market or self-hosted API request logic.
 

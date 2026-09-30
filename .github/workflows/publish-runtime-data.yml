@@ -145,11 +145,12 @@ jobs:
         id: publish
         env:
           TARGET: ${{ steps.target.outputs.target }}
+          ITEM_NAMES_PATH: ${{ steps.target.outputs.item_names_path }}
         run: |
           set -euo pipefail
           mapfile -t paths < <(python3 tools/validate_runtime_data.py --target "$TARGET" --list-paths)
           git add -- "${paths[@]}"
-          python3 tools/validate_runtime_data.py --target "$TARGET" --check-staged
+          python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core --item-names "$ITEM_NAMES_PATH" --check-staged
           git diff --cached --check
           git fetch --quiet origin main
           local_head="$(git rev-parse HEAD)"
@@ -185,15 +186,12 @@ jobs:
           TARGET: ${{ steps.target.outputs.target }}
           CHANGED: ${{ steps.publish.outputs.changed }}
           ASSETS_REVISION: ${{ steps.publish.outputs.assets_revision }}
+          ITEM_NAMES_PATH: ${{ steps.target.outputs.item_names_path }}
         run: |
           set -euo pipefail
           purge_flag=()
           if [[ "$CHANGED" == "true" ]]; then purge_flag+=(--purge); fi
-          python3 tools/validate_runtime_data.py \
-            --target "$TARGET" \
-            --verify-public \
-            --revision "$ASSETS_REVISION" \
-            "${purge_flag[@]}"
+          python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core --item-names "$ITEM_NAMES_PATH" --verify-public --revision "$ASSETS_REVISION" "${purge_flag[@]}"
 
       - name: Publish the EELog readiness descriptor after its dependencies verify
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline' || steps.target.outputs.target == 'translations'

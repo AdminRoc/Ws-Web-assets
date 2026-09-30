@@ -45,6 +45,19 @@ class RuntimeDataContractTests(unittest.TestCase):
         runtime_data.validate_baseline()
         runtime_data.validate_rotation()
 
+    def test_release_workflow_passes_inputs_to_repeated_validation_gates(self):
+        workflow = (runtime_data.ROOT / ".github/workflows/publish-runtime-data.yml").read_text(encoding="utf-8")
+        self.assertIn(
+            'python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core '
+            '--item-names "$ITEM_NAMES_PATH" --check-staged',
+            workflow,
+        )
+        self.assertIn(
+            'python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core '
+            '--item-names "$ITEM_NAMES_PATH" --verify-public',
+            workflow,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

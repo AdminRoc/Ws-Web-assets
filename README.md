@@ -31,3 +31,13 @@ Warframe Speed 站点群共享静态资产与运行时数据库（公开）。
 
 详细边界和运行步骤见 [runtime-data-release.md](docs/runtime-data-release.md)。
 - `.github/` 抓取脚本与每日工作流
+
+## 人工审核候选
+
+- `harvest-drop-table-i18n.yml` 与 `harvest-calamity-i18n.yml` 只在手动触发时生成候选，提交到
+  `data/review-candidates/`。候选不会被前端或运行时读取，也不会自动并入任何正式汉化源。
+- 掉落候选只读取合同声明的 `Ws-Web/data/item/drops-index.json`；官方本地化候选从固定版本
+  `Ws-Web-core/data/wf-translations.json` 读取。两条流程都不写入 Ws-Web 或 Core。
+- 旧 `cache-item-icons.yml` 已退役：它曾把图片写入非合同路径 `Ws-Web/data/icons/**`；保留
+  Ws-Web 中已有文件，不再由 Assets 更新。当前 item 站以 Assets `manifest.json` 为首选，缺失时
+  使用现有 Wiki/Warframe.market 回退；Assets 自己的图标产物仍由 `harvest-icons.yml` 维护。

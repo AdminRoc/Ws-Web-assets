@@ -1,0 +1,247 @@
+name: Publish non-item runtime data
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Runtime-data family to validate and publish
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - baseline
+          - translations
+          - rotation
+  workflow_run:
+    workflows:
+      - 手动生成物品中文名补充字典
+    types: [completed]
+  schedule:
+    - cron: '0 */2 * * *'
+    - cron: '17 4 * * *'
+    - cron: '17 6 * * *'
+
+concurrency:
+  group: ws-web-batch-lock
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Ws-Web-assets
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Checkout the pinned Ws-Web-core producers
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web-core
+          ref: 6f986b019e7949d15a0a59aa927ff05831662f09
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: .runtime-core
+
+      - name: Checkout only the declared item-name input from Ws-Web
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v5
+        with:
+          repository: AdminRoc/Ws-Web
+          ref: main
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          path: .item-source
+          sparse-checkout: data/item/item-names-zh.json
+          sparse-checkout-cone-mode: false
+          fetch-depth: 1
+
+      - name: Run the pinned Core regression suite
+        working-directory: .runtime-core
+        env:
+          # Core tests mock the producer requests; this placeholder is never used for a network call.
+          ARB_SOURCE_URL: https://example.invalid/test-only
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Select the scheduled or manually requested data family
+        id: target
+        env:
+          SCHEDULE: ${{ github.event.schedule || '' }}
+          REQUESTED_TARGET: ${{ inputs.target || 'all' }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            case "$SCHEDULE" in
+              '0 */2 * * *') target=baseline ;;
+              '17 4 * * *') target=translations ;;
+              '17 6 * * *') target=rotation ;;
+              *) echo "Unknown runtime-data schedule; refusing to publish" >&2; exit 1 ;;
+            esac
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            target=translations
+          else
+            target="$REQUESTED_TARGET"
+          fi
+          case "$target" in
+            all|baseline|translations|rotation) ;;
+            *) echo "Invalid runtime-data target" >&2; exit 1 ;;
+          esac
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            echo "item_names_path=.item-source/data/item/item-names-zh.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "item_names_path=data/item/item-names-zh.json" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Selected runtime-data family: $target"
+
+      - name: Build and validate the arbitration baseline pair
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline'
+        env:
+          ARB_SOURCE_URL: ${{ secrets.ARB_SOURCE_URL }}
+          ARB_BASELINE_OUT: data/arbitration-metrics/arb-node-baseline.json
+          ARB_BASELINE_JS_OUT: data/arbitration-metrics/arb-node-baseline.js
+        run: |
+          set -euo pipefail
+          test -n "$ARB_SOURCE_URL" || { echo 'Missing required repository secret ARB_SOURCE_URL' >&2; exit 1; }
+          python3 .runtime-core/.github/scripts/build_arb_baseline.py
+
+      - name: Build shared translations and Chinese SolNode names
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'translations'
+        env:
+          ITEM_NAMES_PATH: ${{ steps.target.outputs.item_names_path }}
+        run: |
+          set -euo pipefail
+          python3 .runtime-core/.github/scripts/gen_wf_translations.py \
+            --source .runtime-core/data/wf-translations.json \
+            --output js/wf-translations.js
+          python3 .runtime-core/.github/scripts/gen_cn_solnodes.py \
+            --output data/worldstate/cn-solnodes.json
+          python3 .runtime-core/.github/scripts/gen_i18n.py \
+            --core-root .runtime-core \
+            --item-names "$ITEM_NAMES_PATH" \
+            --output data/i18n/wf-i18n.json
+
+      - name: Build the Tenet/Coda rotation snapshot
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'rotation'
+        run: >-
+          python3 .runtime-core/.github/scripts/fetch_tenet_coda.py
+          --output data/tenet-coda-rotation.json
+
+      - name: Validate data, paired outputs, and the strict write scope
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+          ITEM_NAMES_PATH: ${{ steps.target.outputs.item_names_path }}
+        run: >-
+          python3 tools/validate_runtime_data.py
+          --target "$TARGET"
+          --core-root .runtime-core
+          --item-names "$ITEM_NAMES_PATH"
+          --check-worktree
+
+      - name: Commit only the selected runtime-data contract paths
+        id: publish
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < <(python3 tools/validate_runtime_data.py --target "$TARGET" --list-paths)
+          git add -- "${paths[@]}"
+          python3 tools/validate_runtime_data.py --target "$TARGET" --check-staged
+          git diff --cached --check
+          git fetch --quiet origin main
+          local_head="$(git rev-parse HEAD)"
+          remote_head="$(git rev-parse origin/main)"
+          if [[ "$local_head" != "$remote_head" ]]; then
+            echo "Assets main moved during generation; refusing to rebase generated runtime data" >&2
+            exit 1
+          fi
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "data: publish ${TARGET} runtime artifacts [skip ci]"
+            if ! git push origin HEAD:main; then
+              remote_head="$(git ls-remote origin refs/heads/main | cut -f1)"
+              if [[ "$remote_head" != "$(git rev-parse HEAD)" ]]; then
+                echo "Runtime data push did not reach Assets main" >&2
+                exit 1
+              fi
+            fi
+            remote_head="$(git ls-remote origin refs/heads/main | cut -f1)"
+            if [[ "$remote_head" != "$(git rev-parse HEAD)" ]]; then
+              echo "Assets main readback does not match the generated commit" >&2
+              exit 1
+            fi
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "assets_revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Purge and verify the selected public Assets bytes
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+          CHANGED: ${{ steps.publish.outputs.changed }}
+          ASSETS_REVISION: ${{ steps.publish.outputs.assets_revision }}
+        run: |
+          set -euo pipefail
+          purge_flag=()
+          if [[ "$CHANGED" == "true" ]]; then purge_flag+=(--purge); fi
+          python3 tools/validate_runtime_data.py \
+            --target "$TARGET" \
+            --verify-public \
+            --revision "$ASSETS_REVISION" \
+            "${purge_flag[@]}"
+
+      - name: Publish the EELog readiness descriptor after its dependencies verify
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline' || steps.target.outputs.target == 'translations'
+        id: eelog
+        run: |
+          set -euo pipefail
+          artifact_paths=(
+            js/wf-translations.js
+            data/i18n/wf-i18n.json
+            data/arbitration-metrics/arb-node-baseline.js
+            data/arbitration-metrics/arb-node-baseline.json
+          )
+          artifact_revision="$(git log -1 --format=%H -- "${artifact_paths[@]}")"
+          test -n "$artifact_revision"
+          python3 tools/build_eelog_runtime_release.py --assets-revision "$artifact_revision"
+          git add -- data/eelog-runtime-release.json
+          git diff --cached --check
+          git fetch --quiet origin main
+          local_head="$(git rev-parse HEAD)"
+          remote_head="$(git rev-parse origin/main)"
+          if [[ "$local_head" != "$remote_head" ]]; then
+            echo "Assets main moved before EELog descriptor publication; refusing stale publish" >&2
+            exit 1
+          fi
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "data: publish EELog runtime readiness descriptor [skip ci]"
+            if ! git push origin HEAD:main; then
+              remote_head="$(git ls-remote origin refs/heads/main | cut -f1)"
+              if [[ "$remote_head" != "$(git rev-parse HEAD)" ]]; then
+                echo "EELog descriptor push did not reach Assets main" >&2
+                exit 1
+              fi
+            fi
+            remote_head="$(git ls-remote origin refs/heads/main | cut -f1)"
+            if [[ "$remote_head" != "$(git rev-parse HEAD)" ]]; then
+              echo "Assets main does not contain the EELog descriptor commit" >&2
+              exit 1
+            fi
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "artifact_revision=$artifact_revision" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the published EELog descriptor and pinned artifact bytes
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline' || steps.target.outputs.target == 'translations'
+        env:
+          ITEM_NAMES_PATH: ${{ steps.target.outputs.item_names_path }}
+        run: python3 tools/validate_runtime_data.py --target all --core-root .runtime-core --item-names "$ITEM_NAMES_PATH" --verify-eelog-release

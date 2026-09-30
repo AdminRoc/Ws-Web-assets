@@ -16,7 +16,7 @@ The descriptor at `data/eelog-runtime-release.json` records one immutable assets
 - `log/js/solNodes.js`;
 - any EELog parser logic.
 
-The hourly descriptor workflow uses the latest commit touching the four runtime artifacts, so it remains unchanged when unrelated public assets update. Generate manually after the four public artifacts are present in one assets checkout:
+The `publish-runtime-data.yml` workflow updates this descriptor only after the selected dependencies pass public CDN byte-for-byte readback. It uses the latest commit touching the four runtime artifacts, so unrelated public asset commits do not change the release family. The older standalone hourly descriptor writer has been retired because it could publish readiness metadata without first verifying those dependencies. The helper can still be run manually for local inspection after the four public artifacts are present in one Assets checkout:
 
 ```powershell
 python tools/build_eelog_runtime_release.py --assets-revision <assets-commit-sha>

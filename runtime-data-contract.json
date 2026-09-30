@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "name": "wfspeed-public-runtime-data-contract",
+  "owner_repository": "Ws-Web-assets",
+  "description": "Non-item runtime data generated for public CDN consumers. This contract is separate from item-artifact-contract.json and never authorizes writes to Ws-Web.",
+  "input_sources": [
+    {
+      "repository": "Ws-Web-core",
+      "paths": [
+        ".github/scripts/build_arb_baseline.py",
+        ".github/scripts/fetch_tenet_coda.py",
+        ".github/scripts/gen_i18n.py",
+        ".github/scripts/gen_wf_translations.py",
+        ".github/scripts/gen_cn_solnodes.py",
+        "data/wf-translations.json",
+        "log/js/wf-i18n-zh.js"
+      ],
+      "resolution": "The publishing workflow pins one immutable Core commit."
+    },
+    {
+      "repository": "Ws-Web",
+      "paths": ["data/item/item-names-zh.json"],
+      "contract": "Ws-Web-assets/item-artifact-contract.json",
+      "purpose": "Read-only input only to the derived shared i18n artifact; this workflow never changes Ws-Web."
+    },
+    {
+      "repository": "public-upstream",
+      "paths": [
+        "ARB_SOURCE_URL (secret name only)",
+        "the existing Tenet/Coda Google Sheet",
+        "the existing Warframe public localization exports",
+        "the existing official Chinese SolNode mapping source"
+      ],
+      "resolution": "URLs and request behavior remain in the pinned Core scripts."
+    }
+  ],
+  "groups": {
+    "baseline": {
+      "schedule_utc": "0 */2 * * *",
+      "artifacts": [
+        {
+          "id": "arb-node-baseline-json",
+          "path": "data/arbitration-metrics/arb-node-baseline.json",
+          "consumer": "Ws-Web-eelog immutable runtime release"
+        },
+        {
+          "id": "arb-node-baseline-js",
+          "path": "data/arbitration-metrics/arb-node-baseline.js",
+          "consumer": "Ws-Web-eelog immutable runtime release and local seed fallback"
+        }
+      ]
+    },
+    "translations": {
+      "schedule_utc": "17 4 * * *",
+      "artifacts": [
+        {
+          "id": "shared-translations-js",
+          "path": "js/wf-translations.js",
+          "consumer": "Ws-Web-world local fallback plus validated Assets CDN overlay; Ws-Web-eelog immutable runtime release"
+        },
+        {
+          "id": "shared-i18n-json",
+          "path": "data/i18n/wf-i18n.json",
+          "consumer": "Ws-Web-world and Ws-Web-eelog"
+        },
+        {
+          "id": "cn-solnodes-json",
+          "path": "data/worldstate/cn-solnodes.json",
+          "consumer": "Ws-Web-world"
+        }
+      ]
+    },
+    "rotation": {
+      "schedule_utc": "17 6 * * *",
+      "artifacts": [
+        {
+          "id": "tenet-coda-rotation-json",
+          "path": "data/tenet-coda-rotation.json",
+          "consumer": "Ws-Web-world"
+        }
+      ]
+    }
+  },
+  "write_boundaries": {
+    "allowed_repository": "Ws-Web-assets",
+    "allowed_paths_are_only_group_artifacts": true,
+    "must_not_checkout_or_write": [
+      "Ws-Web non-item paths",
+      "Ws-Web leaderboard source files or generated bundles"
+    ],
+    "must_not_write": [
+      "Ws-Web-assets/data/item/**",
+      "Ws-Web-assets/item-artifact-contract.json"
+    ],
+    "publication": "Validate generated content, commit only the selected group artifacts, purge mutable CDN paths, then verify exact mutable and immutable public bytes. EELog release metadata is published only after its dependencies verify."
+  }
+}

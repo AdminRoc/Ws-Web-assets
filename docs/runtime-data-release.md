@@ -1,0 +1,27 @@
+# Public Runtime Data Release
+
+`runtime-data-contract.json` owns the non-item runtime outputs published from this repository. It is deliberately separate from `item-artifact-contract.json`: the item synchronizer may only read the item paths declared by that contract, while the runtime producer reads the pinned Core source and the item-name artifact as an input and writes only its own listed Assets outputs.
+
+## Producer and cadence
+
+`.github/workflows/publish-runtime-data.yml` serializes with the other Assets publishers using `ws-web-batch-lock`. It checks out one immutable Ws-Web-core commit and dispatches only the data family due for that event. When the existing manual item-name generator completes successfully, a `workflow_run` also rebuilds translations from the just-published, contract-declared `Ws-Web/data/item/item-names-zh.json`; that sparse checkout is read-only and never writes to Ws-Web.
+
+| Family | UTC schedule | Outputs | Main consumers |
+| --- | --- | --- | --- |
+| Arbitration baseline | `0 */2 * * *` | JSON plus matching embedded JS seed | Ws-Web-eelog runtime release |
+| Shared translations | `17 4 * * *` | translation JS, unified i18n JSON, Chinese SolNode dictionary | Ws-Web-world and Ws-Web-eelog |
+| Tenet/Coda rotation | `17 6 * * *` | rotation JSON | Ws-Web-world |
+
+Manual dispatch accepts `all` or one family. The existing request URLs, headers, cadence inside each producer, and source-specific parsing remain in the pinned Core scripts; this migration does not alter Warframe.market or self-hosted API request logic.
+
+## Safety and publication
+
+1. Run the pinned Core unit suite and the selected generator(s). The generators fail closed on invalid shapes, missing mission responses, suspicious coverage loss, invalid weapon identity/bonus rows, malformed translations, or unreadable previous artifacts.
+2. Validate paired baseline JSON/JS equality, shared translation inputs, output schemas and counts. Compare the complete working-tree change set with the selected group in `runtime-data-contract.json`; item files, Ws-Web data, and unrelated files must remain untouched.
+3. Commit and push only the selected output paths. A stale remote head aborts rather than rebasing generated data over a concurrent release.
+4. Purge each selected mutable jsDelivr `@main` path, then verify exact bytes and SHA-256 from both `@main` and the immutable commit URL. If any public readback differs, fail the run and do not publish EELog readiness metadata.
+5. For a baseline or translation release, build the existing EELog runtime descriptor only after the dependency files pass public readback. EELog continues to resolve a consistent immutable asset revision; its own local fallback files remain intact.
+
+This workflow does not checkout or write Ws-Web non-item paths, does not touch leaderboard sources or bundles, and does not write any `data/item/**` file or `item-artifact-contract.json`. The `data/item/item-names-zh.json` artifact is read-only input under its existing item contract. `Ws-Web-assets` is a public data/reference repository, not an EdgeOne Maker site build target.
+
+`Ws-Web-world` keeps its local `js/wf-translations.js` as fallback and loads the validated Assets copy as a later overlay. The dynamic i18n, Tenet/Coda, and Chinese SolNode data paths remain the existing public Assets URLs; no consumer API or Warframe.market call is modified by this release flow.

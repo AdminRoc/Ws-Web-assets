@@ -1,6 +1,6 @@
 # Ws-Web-assets — AI 协作指引
 
-公开资产仓库，供 Warframe Speed 站点群（Ws-Web 主站及各独立站：eelog/map/item 等）经 jsDelivr 引用图片资产。
+公开资产与运行时数据仓库，供 Warframe Speed 站点群（Ws-Web 主站及各独立站：eelog/map/item/world 等）经 jsDelivr 引用图片和公开数据。
 
 ## 引用方法（其他页面/项目）
 
@@ -69,3 +69,11 @@ assert not missing, missing
 - **不要**在 .gitignore 忽略 `manifest.json` 或 `icons/`（部署/引用依赖）
 - 本库是**公开**仓库：不含任何密钥/敏感数据；抓取 UA 标注 `wfspeed-assets/1.0` 非商业用途
 - warframe.market 图片：服务器端（GitHub Actions/本地脚本）**必然 403**（Bot 防护按 TLS 指纹/IP），唯一可行通道是浏览器验证会话（cf_clearance 等 cookies，时效约 30min）；需要批量补 WM 图时复用"Playwright 过验证 → 导出 cookies → 本地带 cookies 并发下载"流程
+
+## 公共运行时数据边界
+
+- 非 item JSON/JS 产物由 `runtime-data-contract.json` 与 `docs/runtime-data-release.md` 管理；不要把它们加入 `item-artifact-contract.json`。
+- `.github/workflows/publish-runtime-data.yml` 只允许写入运行时合同列出的路径。它读取固定版本的 Ws-Web-core 脚本/私有源；共享 i18n 仅从 item 合同明确声明的 `Ws-Web/data/item/item-names-zh.json` 读取，绝不写回 Ws-Web 或读取其非 item 数据。
+- 任何运行时输出都要先校验 schema、覆盖率、身份/历史连续性、配对文件一致性，再提交；发布后要校验 jsDelivr 可变 `@main` 和不可变 commit 路径的精确字节。校验失败必须保留当前公开文件，不得用空值或部分值替换。
+- `data/item/**`、`item-artifact-contract.json`、图标 `manifest.json` 与图片流程均不属于非 item runtime publisher 的写入范围。
+- 本仓库的 workflow “build”是数据生成，不是 EdgeOne Maker 网站构建或部署。

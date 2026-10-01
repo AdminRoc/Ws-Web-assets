@@ -15,11 +15,8 @@ SCHEDULE_TARGETS = {
     "17 4 * * *": "translations",
     "17 6 * * *": "rotation",
 }
-MIN_AGE_MINUTES = {
-    "baseline": 110,
-    "translations": 23 * 60,
-    "rotation": 23 * 60,
-}
+TARGETS = {"baseline", "translations", "rotation"}
+MIN_AGE_MINUTES = {"baseline": 110}
 RUN_TITLE_PREFIX = "Publish non-item runtime data"
 
 
@@ -33,7 +30,7 @@ def resolve_target(event_name: str, schedule: str, requested_target: str) -> str
         return "translations"
     if event_name == "workflow_dispatch":
         target = requested_target or "all"
-        if target not in {"all", *MIN_AGE_MINUTES}:
+        if target not in {"all", *TARGETS}:
             raise ValueError("invalid runtime-data target")
         return target
     raise ValueError("unsupported runtime-data event")
@@ -62,10 +59,10 @@ def should_run_capture(
     if runs is None or any(not isinstance(run, dict) for run in runs):
         raise ValueError("workflow-run list is invalid")
 
-    title = f"{RUN_TITLE_PREFIX} [{target}]"
+    titles = {f"{RUN_TITLE_PREFIX} [{target}]", f"{RUN_TITLE_PREFIX} [all]"}
     target_runs = [
         run for run in runs
-        if run.get("display_title") == title
+        if run.get("display_title") in titles
         and (not current_run_id or str(run.get("id", "")) != current_run_id)
     ]
     if not target_runs:
@@ -80,9 +77,24 @@ def should_run_capture(
     latest = max(target_runs, key=run_time)
     conclusion = latest.get("conclusion")
     status = latest.get("status")
-    age = now.astimezone(timezone.utc) - run_time(latest)
+    now_utc = now.astimezone(timezone.utc)
+    latest_time = run_time(latest)
+    age = now_utc - latest_time
     if age < -timedelta(minutes=5):
         raise ValueError("latest tagged producer run is unexpectedly in the future")
+
+    if target in {"translations", "rotation"}:
+        if status == "in_progress":
+            if latest_time.date() == now_utc.date() or age < timedelta(hours=2):
+                age_minutes = max(0, int(age.total_seconds() // 60))
+                return False, f"latest {target} producer run is still in progress ({age_minutes} minutes old)"
+            return True, "daily producer run is stale and can be recovered"
+        if conclusion != "success":
+            return True, "latest tagged producer did not succeed; allow recovery"
+        if latest_time.date() == now_utc.date():
+            return False, f"latest {target} producer already succeeded on this UTC date"
+        return True, f"no successful {target} producer run exists on this UTC date"
+
     min_age = timedelta(minutes=MIN_AGE_MINUTES[target])
     if status == "in_progress" and age < min_age:
         age_minutes = max(0, int(age.total_seconds() // 60))

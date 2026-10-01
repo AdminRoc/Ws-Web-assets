@@ -52,11 +52,17 @@ class RuntimeScheduleGuardTests(unittest.TestCase):
         run, _ = should_run_capture("workflow_dispatch", "true", "baseline", [latest], NOW)
         self.assertTrue(run)
 
-    def test_daily_family_is_skipped_only_within_23_hours(self):
-        recent = tagged_run("rotation", NOW - timedelta(hours=22, minutes=59))
-        old = tagged_run("rotation", NOW - timedelta(hours=23))
-        self.assertFalse(should_run_capture("schedule", "false", "rotation", [recent], NOW)[0])
-        self.assertTrue(should_run_capture("schedule", "false", "rotation", [old], NOW)[0])
+    def test_daily_family_deduplicates_by_utc_date_not_rolling_23_hours(self):
+        same_day = tagged_run("rotation", NOW - timedelta(hours=2))
+        previous_day_late = tagged_run("rotation", NOW - timedelta(hours=22, minutes=59))
+        self.assertFalse(should_run_capture("schedule", "false", "rotation", [same_day], NOW)[0])
+        self.assertTrue(should_run_capture("schedule", "false", "rotation", [previous_day_late], NOW)[0])
+
+    def test_recent_all_family_success_counts_for_each_daily_target(self):
+        all_family = tagged_run("all", NOW - timedelta(minutes=5))
+        self.assertFalse(
+            should_run_capture("schedule", "false", "translations", [all_family], NOW)[0]
+        )
 
     def test_failed_target_run_does_not_hide_behind_an_older_success(self):
         failed = tagged_run("baseline", NOW - timedelta(minutes=5), "failure")
@@ -70,6 +76,13 @@ class RuntimeScheduleGuardTests(unittest.TestCase):
         run, reason = should_run_capture("workflow_dispatch", "true", "baseline", [active], NOW)
         self.assertFalse(run)
         self.assertIn("still in progress", reason)
+
+    def test_previous_day_in_progress_daily_run_does_not_hold_next_daily_cycle(self):
+        active = tagged_run("translations", NOW - timedelta(hours=17), conclusion=None)
+        active["status"] = "in_progress"
+        self.assertTrue(
+            should_run_capture("workflow_dispatch", "true", "translations", [active], NOW)[0]
+        )
 
     def test_current_run_is_excluded_from_in_progress_duplicate_detection(self):
         current = tagged_run("baseline", NOW - timedelta(seconds=10), conclusion=None)

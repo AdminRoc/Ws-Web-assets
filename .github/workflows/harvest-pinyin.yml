@@ -22,6 +22,7 @@ on:
 concurrency:
   group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
   cancel-in-progress: false
+  queue: max
 
 jobs:
   harvest:

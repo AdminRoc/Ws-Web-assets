@@ -18,6 +18,7 @@ on:
 concurrency:
   group: ws-web-batch-lock
   cancel-in-progress: false
+  queue: max
 
 jobs:
   generate:

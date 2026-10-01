@@ -25,6 +25,7 @@ concurrency:
   # Serialize manifest.json updates with the ITEM_KV release publisher.
   group: ws-web-batch-lock
   cancel-in-progress: false
+  queue: max
 
 jobs:
   schedule_guard:

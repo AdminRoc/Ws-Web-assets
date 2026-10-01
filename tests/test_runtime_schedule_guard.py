@@ -71,6 +71,15 @@ class RuntimeScheduleGuardTests(unittest.TestCase):
         self.assertFalse(run)
         self.assertIn("still in progress", reason)
 
+    def test_current_run_is_excluded_from_in_progress_duplicate_detection(self):
+        current = tagged_run("baseline", NOW - timedelta(seconds=10), conclusion=None)
+        current.update({"id": 1234, "status": "in_progress"})
+        self.assertTrue(
+            should_run_capture(
+                "workflow_dispatch", "true", "baseline", [current], NOW, "1234"
+            )[0]
+        )
+
     def test_stalled_in_progress_target_run_allows_recovery_after_threshold(self):
         active = tagged_run("baseline", NOW - timedelta(minutes=111), conclusion=None)
         active["status"] = "in_progress"

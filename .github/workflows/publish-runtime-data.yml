@@ -65,6 +65,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_API_URL: ${{ github.api_url }}
           WORKFLOW_FILE: publish-runtime-data.yml
+          CURRENT_RUN_ID: ${{ github.run_id }}
         run: python3 .github/scripts/runtime_schedule_guard.py
 
   publish:

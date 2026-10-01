@@ -52,6 +52,7 @@ def should_run_capture(
     target: str,
     runs: list[dict] | None,
     now: datetime,
+    current_run_id: str = "",
 ) -> tuple[bool, str]:
     periodic = event_name == "schedule" or fallback_input.strip().lower() == "true"
     if not periodic:
@@ -62,7 +63,11 @@ def should_run_capture(
         raise ValueError("workflow-run list is invalid")
 
     title = f"{RUN_TITLE_PREFIX} [{target}]"
-    target_runs = [run for run in runs if run.get("display_title") == title]
+    target_runs = [
+        run for run in runs
+        if run.get("display_title") == title
+        and (not current_run_id or str(run.get("id", "")) != current_run_id)
+    ]
     if not target_runs:
         return True, "no tagged producer run found; allow recovery"
 
@@ -146,13 +151,19 @@ def main() -> int:
             repository = os.environ.get("GITHUB_REPOSITORY", "")
             api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
             workflow_file = os.environ.get("WORKFLOW_FILE", "")
-            if not token or not repository or not workflow_file:
+            current_run_id = os.environ.get("CURRENT_RUN_ID", "")
+            if not token or not repository or not workflow_file or not current_run_id:
                 raise ValueError("GitHub Actions API configuration is incomplete")
             runs = recent_target_runs(repository, api_url, token, workflow_file)
         else:
             runs = None
         run_capture, reason = should_run_capture(
-            event_name, fallback_input, target, runs, datetime.now(timezone.utc)
+            event_name,
+            fallback_input,
+            target,
+            runs,
+            datetime.now(timezone.utc),
+            os.environ.get("CURRENT_RUN_ID", ""),
         )
     except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, TypeError) as error:
         print(f"::error::Could not verify runtime-data freshness ({type(error).__name__})")

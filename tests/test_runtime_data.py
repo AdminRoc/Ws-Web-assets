@@ -55,6 +55,7 @@ class RuntimeDataContractTests(unittest.TestCase):
         self.assertIn("runtime_schedule_guard.py", workflow)
         self.assertIn("needs.schedule_guard.outputs.target", workflow)
         self.assertIn("cf_schedule_fallback", workflow)
+        self.assertIn("CURRENT_RUN_ID: ${{ github.run_id }}", workflow)
         guard = (runtime_data.ROOT / ".github/scripts/runtime_schedule_guard.py").read_text(encoding="utf-8")
         self.assertIn('"7 */2 * * *": "baseline"', guard)
         self.assertIn('"17 4 * * *": "translations"', guard)

@@ -1,4 +1,5 @@
 name: Publish non-item runtime data
+run-name: Publish non-item runtime data [${{ inputs.target || (github.event.schedule == '7 */2 * * *' && 'baseline') || (github.event.schedule == '17 4 * * *' && 'translations') || (github.event.schedule == '17 6 * * *' && 'rotation') || (github.event_name == 'workflow_run' && 'translations') || 'all' }}]
 
 on:
   workflow_dispatch:
@@ -13,6 +14,11 @@ on:
           - baseline
           - translations
           - rotation
+      cf_schedule_fallback:
+        description: Mark as the guarded Core schedule fallback
+        required: false
+        default: false
+        type: boolean
   workflow_run:
     workflows:
       - 手动生成物品中文名补充字典
@@ -29,12 +35,44 @@ concurrency:
   queue: max
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish:
+  schedule_guard:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      target: ${{ steps.guard.outputs.target }}
+      run_capture: ${{ steps.guard.outputs.run_capture }}
+      item_names_path: ${{ steps.guard.outputs.item_names_path }}
+    steps:
+      - name: Checkout the freshness guard
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          sparse-checkout: .github/scripts
+      - name: Select and gate the runtime-data family
+        id: guard
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule || '' }}
+          REQUESTED_TARGET: ${{ inputs.target || '' }}
+          CF_SCHEDULE_FALLBACK: ${{ inputs.cf_schedule_fallback || 'false' }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          WORKFLOW_FILE: publish-runtime-data.yml
+        run: python3 .github/scripts/runtime_schedule_guard.py
+
+  publish:
+    needs: schedule_guard
+    if: ${{ needs.schedule_guard.outputs.run_capture == 'true' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Ws-Web-assets
         uses: actions/checkout@v5
@@ -68,36 +106,18 @@ jobs:
           ARB_SOURCE_URL: https://example.invalid/test-only
         run: python3 -m unittest discover -s tests -v
 
-      - name: Select the scheduled or manually requested data family
+      - name: Use the preflight-selected runtime-data family
         id: target
         env:
-          SCHEDULE: ${{ github.event.schedule || '' }}
-          REQUESTED_TARGET: ${{ inputs.target || 'all' }}
+          TARGET: ${{ needs.schedule_guard.outputs.target }}
+          ITEM_NAMES_PATH: ${{ needs.schedule_guard.outputs.item_names_path }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            case "$SCHEDULE" in
-              '7 */2 * * *') target=baseline ;;
-              '17 4 * * *') target=translations ;;
-              '17 6 * * *') target=rotation ;;
-              *) echo "Unknown runtime-data schedule; refusing to publish" >&2; exit 1 ;;
-            esac
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
-            target=translations
-          else
-            target="$REQUESTED_TARGET"
-          fi
-          case "$target" in
-            all|baseline|translations|rotation) ;;
-            *) echo "Invalid runtime-data target" >&2; exit 1 ;;
-          esac
-          echo "target=$target" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
-            echo "item_names_path=.item-source/data/item/item-names-zh.json" >> "$GITHUB_OUTPUT"
-          else
-            echo "item_names_path=data/item/item-names-zh.json" >> "$GITHUB_OUTPUT"
-          fi
-          echo "Selected runtime-data family: $target"
+          test -n "$TARGET" || { echo 'Missing preflight target' >&2; exit 1; }
+          test -n "$ITEM_NAMES_PATH" || { echo 'Missing preflight item-name input path' >&2; exit 1; }
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "item_names_path=$ITEM_NAMES_PATH" >> "$GITHUB_OUTPUT"
+          echo "Selected runtime-data family: $TARGET"
 
       - name: Build and validate the arbitration baseline pair
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline'

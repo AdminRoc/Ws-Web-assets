@@ -1,22 +1,24 @@
 name: 定时任务失败通知
 
-# 周期性的数据刷新工作流(物品库/缩略图/汉化/拼音表)若某次定时运行失败，过去只能
-# 自己去 Actions 页面翻才发现，容易"悄悄挂掉"。本工作流用 workflow_run 监听这些
-# 工作流的完成事件，一旦 conclusion=failure，就开/更一个带 ci-failure 标签的 Issue
-# (GitHub 会按仓库通知设置把新 Issue/评论邮件给所有者)——零外部依赖、不新增任何密钥。
+# 生产数据、发布和关键只读校验工作流若失败，过去可能只能手动翻 Actions 页面发现。
+# 本工作流监听当前有效的相关工作流，一旦 conclusion=failure，就开/更一个带
+# ci-failure 标签的 Issue（GitHub 通知取决于仓库通知设置）——不新增外部依赖或密钥。
 #
-# 只监听"每日/每周"这类低频刷新流；高频心跳流(世界状态周期/辅助源镜像，每几分钟一次)
-# 故意不纳入：它们失败只是数据稍微变旧、几分钟后自动重试，纳入只会把 Issue 刷爆。
+# 手动 review 候选工作流不纳入；高频心跳流也不纳入，避免无意义告警。
 on:
   workflow_run:
     workflows:
-      - 实际下载缓存物品缩略图进仓库(多来源)
+      - 每日抓取物品图标
+      - 构建物品检索数据(物品库+掉落反查)
+      - Harvest Auction Dicts
       - 收割掉落表物品中文译名
       - 收割 WM 可交易物品中文译名
       - 生成拼音检索表
+      - 手动生成物品中文名补充字典
       - 补齐物品检索缺失缩略图
-      - 信条/终幕武器轮换校准
       - 同步完整物品发布到 EdgeOne KV
+      - Publish non-item runtime data
+      - Verify main-site item artifact release
     types: [completed]
 
 permissions:

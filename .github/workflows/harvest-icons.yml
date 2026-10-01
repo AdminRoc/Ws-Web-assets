@@ -14,6 +14,12 @@ on:
   schedule:
     - cron: '37 2 * * *'
   workflow_dispatch:
+    inputs:
+      cf_schedule_fallback:
+        description: Internal hourly-trigger recovery request
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   # Serialize manifest.json updates with the ITEM_KV release publisher.
@@ -21,7 +27,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  schedule_guard:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.guard.outputs.skip }}
+    steps:
+      - name: Avoid duplicate daily scheduled or fallback runs
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CF_SCHEDULE_FALLBACK: ${{ inputs.cf_schedule_fallback || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != 'schedule' && "$CF_SCHEDULE_FALLBACK" != 'true' ]]; then
+            echo 'skip=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          day_start="$(date -u +%Y-%m-%d)T00:00:00Z"
+          runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/harvest-icons.yml/runs?per_page=100&created=%3E%3D${day_start}")"
+          if jq -e --arg current "$GITHUB_RUN_ID" '
+            .workflow_runs | any(.[];
+              (.id | tostring) != $current
+              and (.status != "completed" or .conclusion == "success")
+            )
+          ' <<< "$runs" >/dev/null; then
+            echo 'skip=true' >> "$GITHUB_OUTPUT"
+            echo 'A successful or in-progress run already exists for this UTC day.'
+          else
+            echo 'skip=false' >> "$GITHUB_OUTPUT"
+          fi
+
   harvest:
+    needs: schedule_guard
+    if: ${{ needs.schedule_guard.result == 'success' && needs.schedule_guard.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -36,7 +36,7 @@
   ],
   "groups": {
     "baseline": {
-      "schedule_utc": "0 */2 * * *",
+      "schedule_utc": "7 */2 * * *",
       "artifacts": [
         {
           "id": "arb-node-baseline-json",

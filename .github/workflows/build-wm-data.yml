@@ -10,6 +10,11 @@ on:
         required: false
         default: '0'
         type: string
+      cf_schedule_fallback:
+        description: Mark as the hourly Cloudflare schedule fallback
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: '37 */2 * * *'
 
@@ -21,7 +26,35 @@ permissions:
   contents: read
 
 jobs:
+  schedule_guard:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      run_capture: ${{ steps.guard.outputs.run_capture }}
+    steps:
+      - name: Checkout freshness guard
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          sparse-checkout: .github/scripts
+      - name: Gate periodic item-catalog builds on the last successful producer
+        id: guard
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CF_SCHEDULE_FALLBACK: ${{ github.event.inputs.cf_schedule_fallback }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          WORKFLOW_FILE: build-wm-data.yml
+          PRODUCER_JOB: build
+          MIN_AGE_MINUTES: "110"
+        run: python3 .github/scripts/workflow_freshness_guard.py
+
   build:
+    needs: schedule_guard
+    if: needs.schedule_guard.outputs.run_capture == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

@@ -68,6 +68,27 @@ class WorkflowFreshnessGuardTests(unittest.TestCase):
         result = select_latest_producer_success([skipped, completed], lambda run: jobs[run["id"]], "build")
         self.assertEqual(result, completed)
 
+    def test_cancelled_before_job_creation_does_not_hide_last_producer_success(self):
+        cancelled_before_start = {"id": 3, "conclusion": "cancelled"}
+        completed = {"id": 2, "conclusion": "success", "updated_at": "2026-10-01T10:00:00Z"}
+        jobs = {3: [], 2: [{"name": "build", "conclusion": "success"}]}
+        result = select_latest_producer_success(
+            [cancelled_before_start, completed], lambda run: jobs[run["id"]], "build"
+        )
+        self.assertEqual(result, completed)
+
+    def test_cancelled_after_producer_job_started_requires_recovery(self):
+        cancelled_during_producer = {"id": 3, "conclusion": "cancelled"}
+        completed = {"id": 2, "conclusion": "success", "updated_at": "2026-10-01T10:00:00Z"}
+        jobs = {
+            3: [{"name": "build", "conclusion": "cancelled"}],
+            2: [{"name": "build", "conclusion": "success"}],
+        }
+        result = select_latest_producer_success(
+            [cancelled_during_producer, completed], lambda run: jobs[run["id"]], "build"
+        )
+        self.assertIsNone(result)
+
     def test_latest_failed_producer_allows_retry_instead_of_hiding_behind_old_success(self):
         failed = {"id": 2, "conclusion": "failure"}
         older = {"id": 1, "conclusion": "success"}

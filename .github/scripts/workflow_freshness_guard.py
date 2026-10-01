@@ -73,6 +73,11 @@ def select_latest_producer_success(
             raise ValueError("GitHub Actions API returned an invalid job list")
         job = next((item for item in jobs if item.get("name") == producer_job), None)
         if job is None:
+            if run.get("conclusion") == "cancelled":
+                # GitHub can cancel a queued run before creating any jobs. It
+                # cannot have changed producer data, so keep looking for the
+                # latest run that actually executed the producer job.
+                continue
             raise ValueError(f"completed workflow run is missing producer job {producer_job!r}")
         conclusion = job.get("conclusion")
         if run.get("conclusion") == "success" and conclusion == "success":

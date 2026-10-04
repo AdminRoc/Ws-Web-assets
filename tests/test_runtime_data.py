@@ -11,18 +11,17 @@ import validate_runtime_data as runtime_data  # noqa: E402
 
 class RuntimeDataContractTests(unittest.TestCase):
     def test_groups_are_disjoint_and_only_contain_non_item_outputs(self):
-        baseline = set(runtime_data.paths_for("baseline"))
         translations = set(runtime_data.paths_for("translations"))
         rotation = set(runtime_data.paths_for("rotation"))
-        self.assertTrue(baseline)
+        self.assertEqual(set(runtime_data.GROUPS), {"translations", "rotation"})
         self.assertTrue(translations)
         self.assertTrue(rotation)
-        self.assertFalse(baseline & translations)
-        self.assertFalse(baseline & rotation)
         self.assertFalse(translations & rotation)
         self.assertTrue(all(not path.startswith("data/item/") for path in runtime_data.paths_for("all")))
         self.assertEqual(len(runtime_data.paths_for("all")),
-                         len(baseline) + len(translations) + len(rotation))
+                         len(translations) + len(rotation))
+        with self.assertRaisesRegex(ValueError, "unknown runtime-data target: baseline"):
+            runtime_data.paths_for("baseline")
 
     def test_generated_assignment_parser_rejects_trailing_code(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -42,7 +41,6 @@ class RuntimeDataContractTests(unittest.TestCase):
     def test_artifacts_match_current_core_and_item_inputs(self):
         core = Path(__file__).resolve().parents[2] / "Ws-Web-core"
         runtime_data.validate_translations(core)
-        runtime_data.validate_baseline()
         runtime_data.validate_rotation()
 
     def test_release_workflow_passes_inputs_to_repeated_validation_gates(self):
@@ -50,16 +48,22 @@ class RuntimeDataContractTests(unittest.TestCase):
         import yaml
         parsed = yaml.load(workflow, Loader=yaml.BaseLoader)
         target_input = parsed["on"]["workflow_dispatch"]["inputs"]["target"]
-        self.assertEqual(target_input["options"], ["all", "baseline", "translations", "rotation"])
-        self.assertIn("- cron: '7 */2 * * *'", workflow)
+        self.assertEqual(target_input["options"], ["all", "translations", "rotation"])
+        self.assertNotIn("7 */2 * * *", workflow)
+        self.assertNotIn("ARB_SOURCE_URL", workflow)
+        self.assertNotIn("build_arb_baseline.py", workflow)
         self.assertIn("runtime_schedule_guard.py", workflow)
         self.assertIn("needs.schedule_guard.outputs.target", workflow)
         self.assertIn("cf_schedule_fallback", workflow)
         self.assertIn("CURRENT_RUN_ID: ${{ github.run_id }}", workflow)
+        self.assertEqual(
+            set(json.loads((runtime_data.ROOT / "data/eelog-runtime-release.json").read_text(encoding="utf-8"))["artifacts"]),
+            {"translationsScript", "i18nJson"},
+        )
         guard = (runtime_data.ROOT / ".github/scripts/runtime_schedule_guard.py").read_text(encoding="utf-8")
-        self.assertIn('"7 */2 * * *": "baseline"', guard)
         self.assertIn('"17 4 * * *": "translations"', guard)
         self.assertIn('"17 6 * * *": "rotation"', guard)
+        self.assertNotIn("baseline", guard)
         self.assertIn(
             'python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core '
             '--item-names "$ITEM_NAMES_PATH" --check-staged',

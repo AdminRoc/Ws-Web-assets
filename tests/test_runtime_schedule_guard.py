@@ -27,7 +27,6 @@ def tagged_run(target, started_at, conclusion="success"):
 
 class RuntimeScheduleGuardTests(unittest.TestCase):
     def test_schedule_and_manual_target_resolution(self):
-        self.assertEqual(resolve_target("schedule", "7 */2 * * *", ""), "baseline")
         self.assertEqual(resolve_target("schedule", "17 4 * * *", ""), "translations")
         self.assertEqual(resolve_target("schedule", "17 6 * * *", ""), "rotation")
         self.assertEqual(resolve_target("workflow_dispatch", "", "all"), "all")
@@ -37,19 +36,17 @@ class RuntimeScheduleGuardTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             resolve_target("schedule", "0 * * * *", "")
         with self.assertRaises(ValueError):
+            resolve_target("schedule", "7 */2 * * *", "")
+        with self.assertRaises(ValueError):
             resolve_target("workflow_dispatch", "", "unknown")
+        with self.assertRaises(ValueError):
+            resolve_target("workflow_dispatch", "", "baseline")
 
     def test_recent_success_of_same_target_skips_but_other_target_does_not(self):
-        recent_baseline = tagged_run("baseline", NOW - timedelta(minutes=10))
         recent_translation = tagged_run("translations", NOW - timedelta(minutes=2))
-        run, _ = should_run_capture("schedule", "false", "baseline", [recent_baseline, recent_translation], NOW)
+        run, _ = should_run_capture("schedule", "false", "translations", [recent_translation], NOW)
         self.assertFalse(run)
-        run, _ = should_run_capture("schedule", "false", "rotation", [recent_baseline, recent_translation], NOW)
-        self.assertTrue(run)
-
-    def test_baseline_is_due_at_110_minutes(self):
-        latest = tagged_run("baseline", NOW - timedelta(minutes=110))
-        run, _ = should_run_capture("workflow_dispatch", "true", "baseline", [latest], NOW)
+        run, _ = should_run_capture("schedule", "false", "rotation", [recent_translation], NOW)
         self.assertTrue(run)
 
     def test_daily_family_deduplicates_by_utc_date_not_rolling_23_hours(self):
@@ -65,15 +62,15 @@ class RuntimeScheduleGuardTests(unittest.TestCase):
         )
 
     def test_failed_target_run_does_not_hide_behind_an_older_success(self):
-        failed = tagged_run("baseline", NOW - timedelta(minutes=5), "failure")
-        older_success = tagged_run("baseline", NOW - timedelta(minutes=10), "success")
-        run, _ = should_run_capture("schedule", "false", "baseline", [failed, older_success], NOW)
+        failed = tagged_run("rotation", NOW - timedelta(minutes=5), "failure")
+        older_success = tagged_run("rotation", NOW - timedelta(minutes=10), "success")
+        run, _ = should_run_capture("schedule", "false", "rotation", [failed, older_success], NOW)
         self.assertTrue(run)
 
     def test_recent_in_progress_target_run_suppresses_duplicate_dispatch(self):
-        active = tagged_run("baseline", NOW - timedelta(minutes=15), conclusion=None)
+        active = tagged_run("translations", NOW - timedelta(minutes=15), conclusion=None)
         active["status"] = "in_progress"
-        run, reason = should_run_capture("workflow_dispatch", "true", "baseline", [active], NOW)
+        run, reason = should_run_capture("workflow_dispatch", "true", "translations", [active], NOW)
         self.assertFalse(run)
         self.assertIn("still in progress", reason)
 
@@ -85,26 +82,21 @@ class RuntimeScheduleGuardTests(unittest.TestCase):
         )
 
     def test_current_run_is_excluded_from_in_progress_duplicate_detection(self):
-        current = tagged_run("baseline", NOW - timedelta(seconds=10), conclusion=None)
+        current = tagged_run("translations", NOW - timedelta(seconds=10), conclusion=None)
         current.update({"id": 1234, "status": "in_progress"})
         self.assertTrue(
             should_run_capture(
-                "workflow_dispatch", "true", "baseline", [current], NOW, "1234"
+                "workflow_dispatch", "true", "translations", [current], NOW, "1234"
             )[0]
         )
 
-    def test_stalled_in_progress_target_run_allows_recovery_after_threshold(self):
-        active = tagged_run("baseline", NOW - timedelta(minutes=111), conclusion=None)
-        active["status"] = "in_progress"
-        self.assertTrue(should_run_capture("workflow_dispatch", "true", "baseline", [active], NOW)[0])
-
     def test_legacy_untagged_runs_do_not_mask_first_recovery(self):
         old_generic = {"display_title": RUN_TITLE_PREFIX, "conclusion": "success"}
-        run, _ = should_run_capture("workflow_dispatch", "true", "baseline", [old_generic], NOW)
+        run, _ = should_run_capture("workflow_dispatch", "true", "translations", [old_generic], NOW)
         self.assertTrue(run)
 
     def test_manual_and_workflow_run_events_bypass_schedule_lookup(self):
-        self.assertTrue(should_run_capture("workflow_dispatch", "false", "baseline", None, NOW)[0])
+        self.assertTrue(should_run_capture("workflow_dispatch", "false", "translations", None, NOW)[0])
         self.assertTrue(should_run_capture("workflow_run", "false", "translations", None, NOW)[0])
 
     @patch("runtime_schedule_guard.api_json")

@@ -18,8 +18,11 @@ Warframe Speed 站点群共享静态资产与运行时数据库（公开）。
 
 `runtime-data-contract.json` 独立声明非 item 运行时数据的生产者、输出范围与消费者；它不扩展
 `item-artifact-contract.json`。`publish-runtime-data.yml` 使用固定版本的 Ws-Web-core 生成
-仲裁基准、共享翻译、国服节点名和 Tenet/Coda 轮换数据，只提交该运行时数据合同列出的 Assets
-路径，并在发布后清理 jsDelivr 的可变 `@main` 缓存并校验可变路径与不可变 commit 路径的完整字节。
+共享翻译、国服节点名和 Tenet/Coda 轮换数据，只提交该运行时数据合同列出的 Assets 路径，
+并在发布后清理 jsDelivr 的可变 `@main` 缓存并校验可变路径与不可变 commit 路径的完整字节。
+
+EELog 的生息精华评分基准已改为本地固定标准。旧 `data/arbitration-metrics/arb-node-baseline.*`
+文件作为现有历史快照保留；本仓库不再自动采集或更新它们，EELog 也不再从这些路径读取或将它们放入 runtime release。
 
 - 本流程不 checkout 或写入 Ws-Web 非 item 路径，也不接触榜单源文件/bundle。
 - `data/item/**` 仍只由 item 合同声明的流程读取、镜像与发布；本流程只读取其中的

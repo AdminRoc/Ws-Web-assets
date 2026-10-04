@@ -11,12 +11,10 @@ from urllib.request import Request, urlopen
 
 
 SCHEDULE_TARGETS = {
-    "7 */2 * * *": "baseline",
     "17 4 * * *": "translations",
     "17 6 * * *": "rotation",
 }
-TARGETS = {"baseline", "translations", "rotation"}
-MIN_AGE_MINUTES = {"baseline": 110}
+TARGETS = {"translations", "rotation"}
 RUN_TITLE_PREFIX = "Publish non-item runtime data"
 
 
@@ -83,29 +81,16 @@ def should_run_capture(
     if age < -timedelta(minutes=5):
         raise ValueError("latest tagged producer run is unexpectedly in the future")
 
-    if target in {"translations", "rotation"}:
-        if status == "in_progress":
-            if latest_time.date() == now_utc.date() or age < timedelta(hours=2):
-                age_minutes = max(0, int(age.total_seconds() // 60))
-                return False, f"latest {target} producer run is still in progress ({age_minutes} minutes old)"
-            return True, "daily producer run is stale and can be recovered"
-        if conclusion != "success":
-            return True, "latest tagged producer did not succeed; allow recovery"
-        if latest_time.date() == now_utc.date():
-            return False, f"latest {target} producer already succeeded on this UTC date"
-        return True, f"no successful {target} producer run exists on this UTC date"
-
-    min_age = timedelta(minutes=MIN_AGE_MINUTES[target])
-    if status == "in_progress" and age < min_age:
-        age_minutes = max(0, int(age.total_seconds() // 60))
-        return False, f"latest {target} producer run is still in progress ({age_minutes} minutes old)"
+    if status == "in_progress":
+        if latest_time.date() == now_utc.date() or age < timedelta(hours=2):
+            age_minutes = max(0, int(age.total_seconds() // 60))
+            return False, f"latest {target} producer run is still in progress ({age_minutes} minutes old)"
+        return True, "daily producer run is stale and can be recovered"
     if conclusion != "success":
         return True, "latest tagged producer did not succeed; allow recovery"
-
-    if age < min_age:
-        age_minutes = max(0, int(age.total_seconds() // 60))
-        return False, f"latest {target} producer run is only {age_minutes} minutes old"
-    return True, f"latest {target} producer run is at least {MIN_AGE_MINUTES[target]} minutes old"
+    if latest_time.date() == now_utc.date():
+        return False, f"latest {target} producer already succeeded on this UTC date"
+    return True, f"no successful {target} producer run exists on this UTC date"
 
 
 def api_json(url: str, token: str) -> dict:

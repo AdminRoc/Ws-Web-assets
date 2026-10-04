@@ -59,35 +59,6 @@ def parse_assignment(path, marker):
     return decoded
 
 
-def validate_baseline():
-    json_path = ROOT / "data/arbitration-metrics/arb-node-baseline.json"
-    js_path = ROOT / "data/arbitration-metrics/arb-node-baseline.js"
-    payload = json_read(json_path)
-    if not isinstance(payload, dict):
-        raise ValueError("arbitration baseline must be a JSON object")
-    mission_types = payload.get("missionTypes")
-    if (not isinstance(mission_types, list) or len(mission_types) != 13
-            or any(not isinstance(item, str) or not item.strip() for item in mission_types)
-            or len(set(mission_types)) != 13 or payload.get("missionTypesFetchedOk") != 13):
-        raise ValueError("arbitration baseline is missing one or more of the 13 complete mission queries")
-    if (not isinstance(payload.get("generatedAt"), int) or isinstance(payload["generatedAt"], bool)
-            or payload["generatedAt"] <= 0):
-        raise ValueError("arbitration baseline has an invalid generatedAt")
-    nodes = payload.get("nodes")
-    if not isinstance(nodes, dict) or len(nodes) < 20 or payload.get("nodeCount") != len(nodes):
-        raise ValueError("arbitration baseline node coverage/count is invalid")
-    for node_id, row in nodes.items():
-        if (not isinstance(node_id, str) or not node_id.strip() or not isinstance(row, dict)
-                or not isinstance(row.get("missionType"), str) or not row["missionType"].strip()
-                or not isinstance(row.get("perHour"), (int, float))
-                or isinstance(row.get("perHour"), bool) or not math.isfinite(row["perHour"])
-                or row["perHour"] <= 0):
-            raise ValueError("arbitration baseline contains an invalid node entry")
-    seed = parse_assignment(js_path, "WF.ARB_NODE_BASELINE_DATA=")
-    if seed != payload:
-        raise ValueError("arbitration JSON and embedded JS seed differ")
-
-
 def validate_rotation():
     payload = json_read(ROOT / "data/tenet-coda-rotation.json")
     if not isinstance(payload, dict):
@@ -251,8 +222,6 @@ def verify_eelog_release():
     expected_paths = {
         "translationsScript": "js/wf-translations.js",
         "i18nJson": "data/i18n/wf-i18n.json",
-        "arbBaselineSeed": "data/arbitration-metrics/arb-node-baseline.js",
-        "arbBaselineJson": "data/arbitration-metrics/arb-node-baseline.json",
     }
     # Git checkout may normalize this tracked JSON to CRLF on Windows; the public
     # descriptor and its hashes are based on the committed LF bytes.
@@ -337,8 +306,6 @@ def main(argv=None):
             print("\n".join(paths_for(args.target)))
             return 0
         selected = set(GROUPS) if args.target == "all" else {args.target}
-        if "baseline" in selected:
-            validate_baseline()
         if "rotation" in selected:
             validate_rotation()
         if "translations" in selected:

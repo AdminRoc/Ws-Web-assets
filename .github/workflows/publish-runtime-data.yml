@@ -1,5 +1,5 @@
 name: Publish non-item runtime data
-run-name: Publish non-item runtime data [${{ inputs.target || (github.event.schedule == '7 */2 * * *' && 'baseline') || (github.event.schedule == '17 4 * * *' && 'translations') || (github.event.schedule == '17 6 * * *' && 'rotation') || (github.event_name == 'workflow_run' && 'translations') || 'all' }}]
+run-name: Publish non-item runtime data [${{ inputs.target || (github.event.schedule == '17 4 * * *' && 'translations') || (github.event.schedule == '17 6 * * *' && 'rotation') || (github.event_name == 'workflow_run' && 'translations') || 'all' }}]
 
 on:
   workflow_dispatch:
@@ -11,7 +11,6 @@ on:
         type: choice
         options:
           - all
-          - baseline
           - translations
           - rotation
       cf_schedule_fallback:
@@ -25,7 +24,6 @@ on:
     types: [completed]
   schedule:
     # Offset from the top of the hour to reduce schedule delay/drop risk.
-    - cron: '7 */2 * * *'
     - cron: '17 4 * * *'
     - cron: '17 6 * * *'
 
@@ -102,9 +100,6 @@ jobs:
 
       - name: Run the pinned Core regression suite
         working-directory: .runtime-core
-        env:
-          # Core tests mock the producer requests; this placeholder is never used for a network call.
-          ARB_SOURCE_URL: https://example.invalid/test-only
         run: python3 -m unittest discover -s tests -v
 
       - name: Use the preflight-selected runtime-data family
@@ -119,17 +114,6 @@ jobs:
           echo "target=$TARGET" >> "$GITHUB_OUTPUT"
           echo "item_names_path=$ITEM_NAMES_PATH" >> "$GITHUB_OUTPUT"
           echo "Selected runtime-data family: $TARGET"
-
-      - name: Build and validate the arbitration baseline pair
-        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline'
-        env:
-          ARB_SOURCE_URL: ${{ secrets.ARB_SOURCE_URL }}
-          ARB_BASELINE_OUT: data/arbitration-metrics/arb-node-baseline.json
-          ARB_BASELINE_JS_OUT: data/arbitration-metrics/arb-node-baseline.js
-        run: |
-          set -euo pipefail
-          test -n "$ARB_SOURCE_URL" || { echo 'Missing required repository secret ARB_SOURCE_URL' >&2; exit 1; }
-          python3 .runtime-core/.github/scripts/build_arb_baseline.py
 
       - name: Build shared translations and Chinese SolNode names
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'translations'
@@ -217,15 +201,13 @@ jobs:
           python3 tools/validate_runtime_data.py --target "$TARGET" --core-root .runtime-core --item-names "$ITEM_NAMES_PATH" --verify-public --revision "$ASSETS_REVISION" "${purge_flag[@]}"
 
       - name: Publish the EELog readiness descriptor after its dependencies verify
-        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline' || steps.target.outputs.target == 'translations'
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'translations'
         id: eelog
         run: |
           set -euo pipefail
           artifact_paths=(
             js/wf-translations.js
             data/i18n/wf-i18n.json
-            data/arbitration-metrics/arb-node-baseline.js
-            data/arbitration-metrics/arb-node-baseline.json
           )
           artifact_revision="$(git log -1 --format=%H -- "${artifact_paths[@]}")"
           test -n "$artifact_revision"
@@ -262,7 +244,7 @@ jobs:
           echo "artifact_revision=$artifact_revision" >> "$GITHUB_OUTPUT"
 
       - name: Verify the published EELog descriptor and pinned artifact bytes
-        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'baseline' || steps.target.outputs.target == 'translations'
+        if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'translations'
         env:
           ITEM_NAMES_PATH: ${{ steps.target.outputs.item_names_path }}
         run: python3 tools/validate_runtime_data.py --target all --core-root .runtime-core --item-names "$ITEM_NAMES_PATH" --verify-eelog-release

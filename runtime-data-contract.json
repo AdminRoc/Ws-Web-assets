@@ -7,7 +7,6 @@
     {
       "repository": "Ws-Web-core",
       "paths": [
-        ".github/scripts/build_arb_baseline.py",
         ".github/scripts/fetch_tenet_coda.py",
         ".github/scripts/gen_i18n.py",
         ".github/scripts/gen_wf_translations.py",
@@ -26,7 +25,6 @@
     {
       "repository": "public-upstream",
       "paths": [
-        "ARB_SOURCE_URL (secret name only)",
         "the existing Tenet/Coda Google Sheet",
         "the existing Warframe public localization exports",
         "the existing official Chinese SolNode mapping source"
@@ -35,21 +33,6 @@
     }
   ],
   "groups": {
-    "baseline": {
-      "schedule_utc": "7 */2 * * *",
-      "artifacts": [
-        {
-          "id": "arb-node-baseline-json",
-          "path": "data/arbitration-metrics/arb-node-baseline.json",
-          "consumer": "Ws-Web-eelog immutable runtime release"
-        },
-        {
-          "id": "arb-node-baseline-js",
-          "path": "data/arbitration-metrics/arb-node-baseline.js",
-          "consumer": "Ws-Web-eelog immutable runtime release and local seed fallback"
-        }
-      ]
-    },
     "translations": {
       "schedule_utc": "17 4 * * *",
       "artifacts": [

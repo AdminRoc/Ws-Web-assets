@@ -12,8 +12,8 @@
     },
     "drops-index": {
       "path": "data/item/drops-index.json",
-      "sha256": "96906e930bcf649fdac9fff5491889548862e14857adb3f65af08204be7231c3",
-      "bytes": 4529264,
+      "sha256": "26324c41ba861b3644abded1752213f9184dda0c92c3a928772e8370001ee085",
+      "bytes": 4506914,
       "delivery": "assets-only",
       "kv_key": null
     },
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "c5eb6e3ff9f919233285120380163abd736b9dd0"
+  "release_id": "7f026186225ab0bb002c1b1ff12790d3a5b46359"
 }

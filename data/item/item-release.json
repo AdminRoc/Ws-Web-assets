@@ -68,8 +68,8 @@
     },
     "auction-attrs-riven": {
       "path": "data/item/auction-dicts/auction-attrs-riven.json",
-      "sha256": "581efe157ae61d7c69928ba56dc28fbe07f4041b42b818ddd33dfeebf8da48f5",
-      "bytes": 13191,
+      "sha256": "dd86cf9b4d0e7417552422cfa4fc25776845e8ab4df59779d9aa96c7ce9df47f",
+      "bytes": 21499,
       "delivery": "kv-and-assets",
       "kv_key": "auction_attrs_riven_json"
     },
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "3e87921803d1b76104e5bb9f8b8ccdff43ecf045"
+  "release_id": "52abca92faec859482cb777a4876bd61ce9412c0"
 }

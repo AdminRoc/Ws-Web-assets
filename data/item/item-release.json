@@ -5,15 +5,15 @@
   "artifacts": {
     "wm-items": {
       "path": "data/item/wm-items.json",
-      "sha256": "eccd13a5223895f2a46c46bf6015e169cb77b2464118cef0c16f765639d8f4fe",
-      "bytes": 772267,
+      "sha256": "43b68e1e80bde39ef2f440dfa015a4c8fed58bf3afa5394ccc2674bb1c8d232f",
+      "bytes": 772271,
       "delivery": "kv-and-assets",
       "kv_key": "wm_items_json"
     },
     "drops-index": {
       "path": "data/item/drops-index.json",
-      "sha256": "26324c41ba861b3644abded1752213f9184dda0c92c3a928772e8370001ee085",
-      "bytes": 4506914,
+      "sha256": "69cb8c18b163dbc1c54102a652bc77d143faa1da820e124638d90fc8cfabd33c",
+      "bytes": 4506918,
       "delivery": "assets-only",
       "kv_key": null
     },
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "b0883a7f916f5970487d8e6ca5d1b7a275b09a6f"
+  "release_id": "ef94ca42b95b249dc7b891dd04e980e74a12fba4"
 }

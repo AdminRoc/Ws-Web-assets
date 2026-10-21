@@ -71,6 +71,85 @@ class WmItemIdentityGuardTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "current WM item manifest is incomplete"):
             validate_stable_id_continuity(valid, malformed, minimum=1)
 
+    def test_explicitly_confirmed_retirement_allows_only_the_matching_stable_id(self):
+        previous = manifest([item("keep-id", "keep_slug"), item("retired-id", "retired_slug")])
+        current = manifest([item("keep-id", "keep_slug")])
+        retirement = [{
+            "id": "retired-id",
+            "slug": "retired_slug",
+            "confirmed_not_tradable": True,
+            "checked_at": "2026-10-21T19:34:43Z",
+            "evidence": {
+                "catalog": {
+                    "http_status": 200,
+                    "id_present": False,
+                    "slug_present": False,
+                },
+                "orders": {
+                    "http_status": 404,
+                    "error": "app.item.notFound",
+                },
+            },
+        }]
+
+        self.assertEqual(
+            validate_stable_id_continuity(previous, current, minimum=1, retired_items=retirement),
+            0,
+        )
+
+    def test_retirement_cannot_hide_a_slug_mismatch_or_unreviewed_loss(self):
+        previous = manifest([item("retired-id", "previous_slug")])
+        current = manifest([item("other-id", "other_slug")])
+        retirement = [{
+            "id": "retired-id",
+            "slug": "different_slug",
+            "confirmed_not_tradable": True,
+            "checked_at": "2026-10-21T19:34:43Z",
+            "evidence": {
+                "catalog": {"http_status": 200, "id_present": False, "slug_present": False},
+                "orders": {"http_status": 404, "error": "app.item.notFound"},
+            },
+        }]
+
+        with self.assertRaisesRegex(ValueError, "does not match the previous slug"):
+            validate_stable_id_continuity(previous, current, minimum=1, retired_items=retirement)
+        with self.assertRaisesRegex(ValueError, "lost 1 previously published stable IDs"):
+            validate_stable_id_continuity(previous, current, minimum=1, retired_items=[])
+
+    def test_retired_identity_reappearing_requires_registry_review(self):
+        previous = manifest([item("retired-id", "retired_slug")])
+        current = manifest([item("retired-id", "retired_slug")])
+        retirement = [{
+            "id": "retired-id",
+            "slug": "retired_slug",
+            "confirmed_not_tradable": True,
+            "checked_at": "2026-10-21T19:34:43Z",
+            "evidence": {
+                "catalog": {"http_status": 200, "id_present": False, "slug_present": False},
+                "orders": {"http_status": 404, "error": "app.item.notFound"},
+            },
+        }]
+
+        with self.assertRaisesRegex(ValueError, "retired stable IDs reappeared"):
+            validate_stable_id_continuity(previous, current, minimum=1, retired_items=retirement)
+
+    def test_retirement_requires_both_catalog_and_order_route_evidence(self):
+        previous = manifest([item("retired-id", "retired_slug")])
+        current = manifest([item("other-id", "other_slug")])
+        retirement = [{
+            "id": "retired-id",
+            "slug": "retired_slug",
+            "confirmed_not_tradable": True,
+            "checked_at": "2026-10-21T19:34:43Z",
+            "evidence": {
+                "catalog": {"http_status": 200, "id_present": True, "slug_present": False},
+                "orders": {"http_status": 404, "error": "app.item.notFound"},
+            },
+        }]
+
+        with self.assertRaisesRegex(ValueError, "lacks confirmed catalog and order-route evidence"):
+            validate_stable_id_continuity(previous, current, minimum=1, retired_items=retirement)
+
 
 if __name__ == "__main__":
     unittest.main()

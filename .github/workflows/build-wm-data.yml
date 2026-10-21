@@ -94,7 +94,8 @@ jobs:
             _private/.github/scripts/build_drops_index.py \
             _private/.github/scripts/verify_ws_web_target_revision.py \
             _ws_web/.github/scripts/
-          cp .github/scripts/wm_item_identity_guard.py _ws_web/.github/scripts/
+          cp .github/scripts/wm_item_identity_guard.py \
+            .github/scripts/wm-retired-items.json _ws_web/.github/scripts/
           cd _ws_web
           base="$(git rev-parse HEAD)"
           python3 .github/scripts/build_wm_items.py

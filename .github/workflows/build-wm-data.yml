@@ -79,9 +79,9 @@ jobs:
 
           git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web.git _ws_web
           git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web-core.git _private
-          git -C _private fetch --quiet --depth=1 origin 3efff94e5b0fe247802dccfd9341e4ab65f4889b
+          git -C _private fetch --quiet --depth=1 origin 0da4983ef4cf71860fcf195bac521391f5dd3daf
           git -C _private checkout --quiet --detach FETCH_HEAD
-          test "$(git -C _private rev-parse HEAD)" = 3efff94e5b0fe247802dccfd9341e4ab65f4889b
+          test "$(git -C _private rev-parse HEAD)" = 0da4983ef4cf71860fcf195bac521391f5dd3daf
 
           python3 -m unittest discover -s _private/tests -p 'test_build_*.py' -v
           curl --fail --show-error --location --retry 3 --retry-all-errors \

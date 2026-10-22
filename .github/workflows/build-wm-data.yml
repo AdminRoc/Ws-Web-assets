@@ -79,9 +79,9 @@ jobs:
 
           git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web.git _ws_web
           git clone --quiet --depth=1 --filter=blob:none https://github.com/AdminRoc/Ws-Web-core.git _private
-          git -C _private fetch --quiet --depth=1 origin 0da4983ef4cf71860fcf195bac521391f5dd3daf
+          git -C _private fetch --quiet --depth=1 origin 93a27f32751bb195182bf01065ceb0af1b3732fc
           git -C _private checkout --quiet --detach FETCH_HEAD
-          test "$(git -C _private rev-parse HEAD)" = 0da4983ef4cf71860fcf195bac521391f5dd3daf
+          test "$(git -C _private rev-parse HEAD)" = 93a27f32751bb195182bf01065ceb0af1b3732fc
 
           python3 -m unittest discover -s _private/tests -p 'test_build_*.py' -v
           curl --fail --show-error --location --retry 3 --retry-all-errors \
@@ -95,13 +95,15 @@ jobs:
             _private/.github/scripts/verify_ws_web_target_revision.py \
             _ws_web/.github/scripts/
           cp .github/scripts/wm_item_identity_guard.py \
-            .github/scripts/wm-retired-items.json _ws_web/.github/scripts/
+            .github/scripts/wm-retired-items.json \
+            .github/scripts/reviewed-drop-source-removals.json _ws_web/.github/scripts/
           cd _ws_web
           base="$(git rev-parse HEAD)"
           python3 .github/scripts/build_wm_items.py
           DROPTABLE_HTML="$RUNNER_TEMP/droptables.html" \
             WM_ITEMS_JSON=data/item/wm-items.json \
             DROPS_OUT=data/item/drops-index.json \
+            DROP_SOURCE_REMOVAL_REVIEW=.github/scripts/reviewed-drop-source-removals.json \
             python3 .github/scripts/build_drops_index.py
 
           python3 - <<'PY'

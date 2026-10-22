@@ -5,7 +5,7 @@
   "artifacts": {
     "wm-items": {
       "path": "data/item/wm-items.json",
-      "sha256": "996cd55dfff02f7ac18f1efd1dc6c2812e3373839998d0b7db2e5acb09333ac9",
+      "sha256": "299894cff6924abfb802b7fd6212e275c09504e5ae78a02992d8f3deb5cbf9ca",
       "bytes": 772034,
       "delivery": "kv-and-assets",
       "kv_key": "wm_items_json"
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "9f5a9ff544fdf43e2175ac5e22e22b4c32630e64"
+  "release_id": "12a7de8700a8429e3fc80361c627ce45a1617fc7"
 }

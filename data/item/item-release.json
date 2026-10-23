@@ -89,11 +89,11 @@
     },
     "icon-manifest": {
       "path": "manifest.json",
-      "sha256": "842b429ca1a8e2703886179e7c394814d8cc2368e15a2dc85d44c4c2c7fa2f42",
-      "bytes": 221739,
+      "sha256": "612a95eb5df0aa7a99369a6c0d7064af7d0f58cc859b34f72a12ec7e5b688831",
+      "bytes": 221841,
       "delivery": "kv-and-assets",
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "20ebe76674ceeebb9808f10d7a1966057e17f00a"
+  "release_id": "53febfd564d0bad0af6f45de716397daa1d4b80e"
 }

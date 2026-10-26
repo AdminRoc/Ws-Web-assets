@@ -147,7 +147,7 @@ jobs:
             local payload="/tmp/${key}.json"
             local current status decision
             current="$(mktemp)"
-            status="$(curl --silent --show-error --fail-with-body --retry 3 --max-time 60 \
+            status="$(curl --silent --show-error --fail-with-body --retry 8 --retry-delay 3 --retry-max-time 180 --connect-timeout 10 --max-time 30 \
               --output "$current" --write-out '%{http_code}' \
               "https://item.wfspeed.run/api/kv?key=${key}&v=preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" || true)"
             if ! decision="$(python3 tools/item_kv_preflight.py "$status" "$current" "$file")"; then

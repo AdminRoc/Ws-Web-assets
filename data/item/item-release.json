@@ -47,8 +47,8 @@
     },
     "item-i18n-harvest": {
       "path": "data/item/item-i18n-harvest.json",
-      "sha256": "56da274765c95ca0b7afc0d1df614da630abe18bce80b933cd13649639d07dce",
-      "bytes": 220238,
+      "sha256": "8b60c51e2c35a1d8299acac199fbf691bca23c900f7625f9389e6d95ff6b75c3",
+      "bytes": 220340,
       "delivery": "kv-and-assets",
       "kv_key": "item_i18n_harvest_json"
     },
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "717ccf2d716aead8f15169ef4dce4b2a635f1a65"
+  "release_id": "6dbf87d62a4c06db6dcadcd06c0ab6b038e09284"
 }

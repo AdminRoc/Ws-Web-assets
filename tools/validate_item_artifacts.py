@@ -35,7 +35,7 @@ def main():
     contract = parse_json(assets_root / args.contract)
     release = parse_json(assets_root / "data/item/item-release.json")
     release_artifacts = release.get("artifacts", {})
-    limit = int(contract["kv_value_limit_bytes"])
+    limit = int(contract.get("kv_value_limit_bytes", 0))
     report = {"schema_version": 1, "artifacts": [], "errors": []}
 
     keys = set()
@@ -75,7 +75,7 @@ def main():
             if artifact["delivery"] == "kv-and-assets" and not entry["kv_eligible"]:
                 report["errors"].append(f"{artifact['id']}: {entry['bytes']} bytes exceeds {limit}-byte KV limit")
 
-        if artifact["delivery"] in ("kv-and-assets", "assets-only") and not entry["asset_matches_source"]:
+        if not entry["asset_matches_source"]:
             report["errors"].append(f"{artifact['id']}: assets mirror missing or differs from source")
 
         release_entry = release_artifacts.get(artifact["id"])

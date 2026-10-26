@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "wfspeed-item-artifact-contract",
-  "description": "Declarative contract for plaintext item data published from Ws-Web to Ws-Web-assets and wfspeed-item ITEM_KV.",
+  "description": "Declarative contract for plaintext item data published from Ws-Web to immutable SHA-pinned Ws-Web-assets raw URLs; KV stores only the current release pointer.",
   "kv_value_limit_bytes": 1048576,
   "source_repository": "Ws-Web",
   "asset_repository": "Ws-Web-assets",
@@ -12,14 +12,14 @@
       "asset_path": "data/item/wm-items.json",
       "kv_key": "wm_items_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "drops-index",
       "source_path": "data/item/drops-index.json",
       "asset_path": "data/item/drops-index.json",
       "required": true,
-      "delivery": "assets-only"
+      "delivery": "raw-only"
     },
     {
       "id": "icon-index",
@@ -27,7 +27,7 @@
       "asset_path": "data/item/icon-index.json",
       "kv_key": "icon_index_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "item-names-zh",
@@ -35,7 +35,7 @@
       "asset_path": "data/item/item-names-zh.json",
       "kv_key": "item_names_zh_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "wm-zh-supplement",
@@ -43,7 +43,7 @@
       "asset_path": "data/item/wm-zh-supplement.json",
       "kv_key": "wm_zh_supplement_json",
       "required": true,
-      "delivery": "kv-and-assets",
+      "delivery": "raw-only",
       "source_kind": "manually-maintained"
     },
     {
@@ -52,7 +52,7 @@
       "asset_path": "data/item/wiki-icon-harvest.json",
       "kv_key": "wiki_icon_harvest_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "item-i18n-harvest",
@@ -60,7 +60,7 @@
       "asset_path": "data/item/item-i18n-harvest.json",
       "kv_key": "item_i18n_harvest_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "pinyin-map",
@@ -68,7 +68,7 @@
       "asset_path": "data/item/pinyin-map.json",
       "kv_key": "pinyin_map_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "auction-weapons-riven",
@@ -76,7 +76,7 @@
       "asset_path": "data/item/auction-dicts/auction-weapons-riven.json",
       "kv_key": "auction_weapons_riven_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "auction-attrs-riven",
@@ -84,7 +84,7 @@
       "asset_path": "data/item/auction-dicts/auction-attrs-riven.json",
       "kv_key": "auction_attrs_riven_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "auction-weapons-lich",
@@ -92,7 +92,7 @@
       "asset_path": "data/item/auction-dicts/auction-weapons-lich.json",
       "kv_key": "auction_weapons_lich_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "auction-weapons-sister",
@@ -100,7 +100,7 @@
       "asset_path": "data/item/auction-dicts/auction-weapons-sister.json",
       "kv_key": "auction_weapons_sister_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     },
     {
       "id": "icon-manifest",
@@ -109,7 +109,7 @@
       "asset_path": "manifest.json",
       "kv_key": "manifest_json",
       "required": true,
-      "delivery": "kv-and-assets"
+      "delivery": "raw-only"
     }
   ]
 }

@@ -60,7 +60,7 @@ def main():
         payload = release_bytes(source)
         json.loads(payload.decode("utf-8"))
         digest = hashlib.sha256(payload).hexdigest()
-        if artifact["delivery"] in ("kv-and-assets", "assets-only"):
+        if artifact["delivery"] in ("kv-and-assets", "assets-only", "raw-only"):
             target.parent.mkdir(parents=True, exist_ok=True)
             if not target.is_file() or release_bytes(target) != payload:
                 changed.append(str(target.relative_to(assets_root)))

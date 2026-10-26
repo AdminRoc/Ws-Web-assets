@@ -161,6 +161,7 @@ jobs:
           pointer = json.loads(pathlib.Path(source).read_text(encoding='utf-8'))
           pointer['generation'] = generation
           value = json.dumps(pointer, ensure_ascii=False, separators=(',', ':'))
+          pathlib.Path(source).write_text(value, encoding='utf-8')
           pathlib.Path(target).write_text(json.dumps({'key': 'item_release_meta', 'value': value}), encoding='utf-8')
           PY
           curl --silent --show-error --fail-with-body --max-time 30 \

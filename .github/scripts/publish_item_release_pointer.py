@@ -57,7 +57,6 @@ def immutable_identity(pointer):
         "schema_version": pointer.get("schema_version"),
         "source_repository": pointer.get("source_repository"),
         "assets_release_path": pointer.get("assets_release_path"),
-        "assets_revision": pointer.get("assets_revision"),
         "release_id": pointer.get("release_id"),
         "artifacts": pointer.get("artifacts"),
     }

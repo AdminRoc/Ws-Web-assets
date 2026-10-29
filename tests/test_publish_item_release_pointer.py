@@ -46,8 +46,8 @@ class ItemPointerTests(unittest.TestCase):
             "release_id": "release",
             "artifacts": {"one": {"path": "one.json", "sha256": "b" * 64, "bytes": 1}},
         }
-        newer = dict(base, generation="new")
-        older = dict(base, generation="old")
+        newer = dict(base, generation="new", assets_revision="a" * 40)
+        older = dict(base, generation="old", assets_revision="b" * 40)
         self.assertEqual(MODULE.immutable_identity(newer), MODULE.immutable_identity(older))
 
     @mock.patch.object(MODULE.time, "sleep")

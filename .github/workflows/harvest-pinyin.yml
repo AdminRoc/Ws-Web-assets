@@ -8,6 +8,7 @@ name: 生成拼音检索表
 # 生成脚本在私库(.github/scripts 整体 gitignore，与
 # harvest-item-i18n.yml / cache-item-icons.yml 同一约定)；运行前 checkout 私库
 # 覆盖进工作树，只把生成的数据文件提交回公库，私库脚本绝不提交回公库。
+# 由 Core Worker 每周串行刷新；工作流保留手动入口。
 on:
   workflow_dispatch:
     inputs:
@@ -16,9 +17,6 @@ on:
         required: false
         default: '0'
         type: string
-  schedule:
-    - cron: '42 5 * * 1'   # 每周一，错开同仓库其他定时任务各自的刷新时间点
-
 concurrency:
   group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
   cancel-in-progress: false

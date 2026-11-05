@@ -9,10 +9,6 @@ on:
         required: false
         default: '0'
         type: string
-  schedule:
-    - cron: '15 */2 * * *'
-    - cron: '22 5 * * 1'
-
 concurrency:
   group: ws-web-batch-lock
   cancel-in-progress: false

@@ -9,14 +9,12 @@ name: 每日抓取物品图标
 #     WM unknown + 掉落专属物品的 wiki 图标
 #   - 已有 manifest 条目跳过，缺失文件增量下载（不 churn git 历史）
 #   - 输出 icons/<物品名>.<ext> + manifest.json（en 名 -> 相对路径映射）
-# 触发：每日定时（UTC 02:37 ≈ 北京时间 10:37）+ 手动 Run workflow
+# 触发：Core Worker 串行队列每日派发一次 + 手动 Run workflow
 on:
-  schedule:
-    - cron: '37 2 * * *'
   workflow_dispatch:
     inputs:
       cf_schedule_fallback:
-        description: Internal hourly-trigger recovery request
+        description: Internal Core serial-scheduler request
         required: false
         default: false
         type: boolean

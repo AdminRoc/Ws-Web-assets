@@ -22,11 +22,6 @@ on:
     workflows:
       - 手动生成物品中文名补充字典
     types: [completed]
-  schedule:
-    # Offset from the top of the hour to reduce schedule delay/drop risk.
-    - cron: '17 4 * * *'
-    - cron: '17 6 * * *'
-
 concurrency:
   group: ws-web-batch-lock
   cancel-in-progress: false

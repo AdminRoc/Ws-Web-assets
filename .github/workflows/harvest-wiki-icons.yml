@@ -11,6 +11,7 @@ name: 补齐物品检索缺失缩略图
 # 抓取脚本在私库(.github/scripts 整体 gitignore 在公库里，
 # 与 harvest-calamity-i18n.yml 同一约定)；运行前 checkout 私库覆盖进工作树，
 # 只把结果文件提交回公库，私库脚本绝不提交回公库。
+# 由 Core Worker 每周串行刷新；工作流保留手动入口。
 on:
   workflow_dispatch:
     inputs:
@@ -19,9 +20,6 @@ on:
         required: false
         default: '0'
         type: string
-  schedule:
-    - cron: '17 3 * * 1'   # 每周一补一次，wm-items.json/drops-index.json 也是周期性更新
-
 concurrency:
   group: ws-web-batch-lock   # 低频批处理任务共用一把锁，与高频世界状态管线（fastlane）分开，互不阻塞
   cancel-in-progress: false

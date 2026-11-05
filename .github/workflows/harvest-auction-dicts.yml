@@ -1,15 +1,13 @@
 name: Harvest Auction Dicts
 
 # 收割拍卖字典数据（武器/词条列表）到 data/item/auction-dicts/，
-# 使 item.html 拍卖搜索的自动补全不需要实时 API。一周两次，保持数据新鲜。
+# 使 item.html 拍卖搜索的自动补全不需要实时 API。由 Core Worker 每周串行刷新。
 #
 # 收割脚本在私库(.github/scripts 整体 gitignore，与
 # cache-item-icons.yml / harvest-pinyin.yml 同一约定)；运行前 checkout 私库
 # 覆盖进工作树，只把收割出的数据文件提交回公库，私库脚本绝不提交回公库。
 
 on:
-  schedule:
-    - cron: '0 2 * * 1'   # 每周一 02:00 UTC（拍卖字典月度级变化；2026-08-07 从每日 2 次降为每周，省构建配额）
   workflow_dispatch:
     inputs:
       retry_attempt:

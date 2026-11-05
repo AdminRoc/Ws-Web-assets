@@ -18,7 +18,6 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 API = "https://wiki.warframe.com/api.php"
 UA = "wfspeed-assets/1.0 (+https://wfspeed.run; non-commercial icon harvest)"
@@ -229,13 +228,12 @@ def main():
             continue
         jobs.append((en, url, dest, "icons/" + fname))
 
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        futs = [ex.submit(dl, url, dest) for _, url, dest, _ in jobs if url is not None]
-        for i, fut in enumerate(as_completed(futs), 1):
-            if fut.result():
-                new_files += 1
-            if i % 100 == 0:
-                print("download progress:", i, "/", len(futs), "| new:", new_files, flush=True)
+    download_jobs = [(url, dest) for _, url, dest, _ in jobs if url is not None]
+    for i, (url, dest) in enumerate(download_jobs, 1):
+        if dl(url, dest):
+            new_files += 1
+        if i % 100 == 0:
+            print("download progress:", i, "/", len(download_jobs), "| new:", new_files, flush=True)
 
     for en, _, _, rel in jobs:
         manifest[en] = rel

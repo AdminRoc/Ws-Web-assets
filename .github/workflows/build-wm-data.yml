@@ -11,13 +11,10 @@ on:
         default: '0'
         type: string
       cf_schedule_fallback:
-        description: Mark as the hourly Cloudflare schedule fallback
+        description: Mark as a Core serial-scheduler dispatch
         required: false
         default: false
         type: boolean
-  schedule:
-    - cron: '37 */2 * * *'
-
 concurrency:
   group: ws-web-batch-lock
   cancel-in-progress: false

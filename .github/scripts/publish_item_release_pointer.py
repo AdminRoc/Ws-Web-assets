@@ -107,11 +107,11 @@ def stage_snapshot(commit, previous, payloads, token):
         chunks.extend(parts)
     if len(chunks) > SLOT_CHUNKS:
         raise SystemExit("Item snapshot exceeds the fixed two-slot KV budget")
-    for index, chunk in enumerate(chunks):
+    def stage_chunk(index, chunk):
         url = snapshot_url(commit, slot, index, 1)
         try:
             if get(url + "&v=" + str(time.time_ns()), attempts=4) == chunk:
-                continue
+                return
         except urllib.error.HTTPError as error:
             if error.code != 404:
                 raise
@@ -136,6 +136,8 @@ def stage_snapshot(commit, previous, payloads, token):
                         raise
                 if attempt == 2 or current_pointer() != previous:
                     raise SystemExit("KV chunk readback mismatch") from error
+    for index, chunk in enumerate(chunks):
+        stage_chunk(index, chunk)
     for path, raw in payloads.items():
         file = files[path]
         url = snapshot_url(commit, slot, file["start"], file["count"])
@@ -149,6 +151,11 @@ def stage_snapshot(commit, previous, payloads, token):
             if attempt == 6:
                 raise SystemExit("KV snapshot readback mismatch: " + path)
             time.sleep(11)
+            if attempt in (2, 4):
+                if current_pointer() != previous:
+                    raise SystemExit("Active Item pointer changed during repair")
+                for index in range(file["start"], file["start"] + file["count"]):
+                    stage_chunk(index, chunks[index])
     return {"slot": slot, "files": files}
 
 

@@ -2,7 +2,7 @@ name: 发布物品数据指针
 
 # Reads only Ws-Web/data/item/**. It never modifies Ws-Web, leaderboard data,
 # or manually maintained records. Action artifacts are served from the public
-# SHA-pinned raw release; EdgeOne KV stores only the small current-release pointer.
+# SHA-pinned raw release; EdgeOne KV stages the same bytes in a bounded dual slot.
 on:
   workflow_dispatch:
     inputs:
@@ -124,7 +124,7 @@ jobs:
           git push origin main
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Publish pointer to verified raw artifact release
+      - name: Stage verified KV snapshot and publish current pointer
         env:
           KV_WRITE_TOKEN: ${{ secrets.KV_WRITE_TOKEN }}
           GITHUB_RUN_ID: ${{ github.run_id }}

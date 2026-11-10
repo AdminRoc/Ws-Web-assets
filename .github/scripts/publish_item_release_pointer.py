@@ -109,13 +109,19 @@ def stage_snapshot(commit, previous, payloads, token):
         raise SystemExit("Item snapshot exceeds the fixed two-slot KV budget")
     for index, chunk in enumerate(chunks):
         url = snapshot_url(commit, slot, index, 1)
+        try:
+            if get(url + "&v=" + str(time.time_ns()), attempts=1) == chunk:
+                continue
+        except urllib.error.HTTPError as error:
+            if error.code != 404:
+                raise
         request = urllib.request.Request(url, data=base64.b64encode(chunk), method="POST",
             headers={"Authorization": "Bearer " + token, "Content-Type": "text/plain"})
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 response.read()
         except Exception as error:
-            print("Chunk write response inconclusive; verifying without replay: " + type(error).__name__, file=sys.stderr)
+            print(f"Chunk {index} write response inconclusive ({getattr(error, 'code', type(error).__name__)}); verifying without replay", file=sys.stderr)
             if get(url + "&v=" + str(time.time_ns()), attempts=1) != chunk:
                 raise SystemExit("KV chunk readback mismatch") from error
     for path, raw in payloads.items():

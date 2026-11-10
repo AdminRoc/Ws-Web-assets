@@ -110,20 +110,32 @@ def stage_snapshot(commit, previous, payloads, token):
     for index, chunk in enumerate(chunks):
         url = snapshot_url(commit, slot, index, 1)
         try:
-            if get(url + "&v=" + str(time.time_ns()), attempts=1) == chunk:
+            if get(url + "&v=" + str(time.time_ns()), attempts=4) == chunk:
                 continue
         except urllib.error.HTTPError as error:
             if error.code != 404:
                 raise
         request = urllib.request.Request(url, data=base64.b64encode(chunk), method="POST",
             headers={"Authorization": "Bearer " + token, "Content-Type": "text/plain"})
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                response.read()
-        except Exception as error:
-            print(f"Chunk {index} write response inconclusive ({getattr(error, 'code', type(error).__name__)}); verifying without replay", file=sys.stderr)
-            if get(url + "&v=" + str(time.time_ns()), attempts=1) != chunk:
-                raise SystemExit("KV chunk readback mismatch") from error
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    response.read()
+                break
+            except (urllib.error.URLError, TimeoutError) as error:
+                code = getattr(error, "code", None)
+                if code in (400, 401, 403, 409, 413):
+                    raise
+                print(f"Chunk {index} write response inconclusive ({code}); verifying before any retry", file=sys.stderr)
+                time.sleep(5)
+                try:
+                    if get(url + "&v=" + str(time.time_ns()), attempts=4) == chunk:
+                        break
+                except urllib.error.HTTPError as read_error:
+                    if read_error.code != 404:
+                        raise
+                if attempt == 2 or current_pointer() != previous:
+                    raise SystemExit("KV chunk readback mismatch") from error
     for path, raw in payloads.items():
         file = files[path]
         url = snapshot_url(commit, slot, file["start"], file["count"])

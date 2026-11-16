@@ -40,8 +40,8 @@
     },
     "wiki-icon-harvest": {
       "path": "data/item/wiki-icon-harvest.json",
-      "sha256": "666b679e3c1836b0eb2f742ac2f134618822019d963affd99ab6f00507f9de47",
-      "bytes": 53478,
+      "sha256": "9bc42f06c10c50180e2e06ed3238febfca64af653dfc7792c6b292817870faf0",
+      "bytes": 53455,
       "delivery": "raw-only",
       "kv_key": "wiki_icon_harvest_json"
     },
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "74bff5d967992656e8b7fd103bb83afe94151268"
+  "release_id": "d6e226dd60ef42a28c540d9da6166f58a78e8147"
 }

@@ -16,7 +16,7 @@ on:
       - 生成拼音检索表
       - 手动生成物品中文名补充字典
       - 补齐物品检索缺失缩略图
-      - 同步完整物品发布到 EdgeOne KV
+      - 发布物品数据指针
       - Publish non-item runtime data
       - Verify main-site item artifact release
     types: [completed]

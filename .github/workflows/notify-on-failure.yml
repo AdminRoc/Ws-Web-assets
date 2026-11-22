@@ -9,7 +9,7 @@ on:
   workflow_run:
     workflows:
       - 每日抓取物品图标
-      - 构建物品检索数据(物品库+掉落反查)
+      - '构建物品检索数据(物品库\+掉落反查)'
       - Harvest Auction Dicts
       - 收割掉落表物品中文译名
       - 收割 WM 可交易物品中文译名

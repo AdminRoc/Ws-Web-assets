@@ -54,8 +54,8 @@
     },
     "pinyin-map": {
       "path": "data/item/pinyin-map.json",
-      "sha256": "e61e92c1edf5286db1eb1562ee90f2cd195f81d1b4dfb92cc95d5a95fc110f62",
-      "bytes": 29108,
+      "sha256": "ab69d78cd38ab0ce611e57d28308f17d8ea4c3545f89d9628e7e34027176f919",
+      "bytes": 28904,
       "delivery": "raw-only",
       "kv_key": "pinyin_map_json"
     },
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "478536ff154ad891b1ae538b1ecb82af52430774"
+  "release_id": "87fa031d9ed10b0d8530b521c6ea5ea66039ed08"
 }

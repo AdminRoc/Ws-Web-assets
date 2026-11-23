@@ -61,28 +61,28 @@
     },
     "auction-weapons-riven": {
       "path": "data/item/auction-dicts/auction-weapons-riven.json",
-      "sha256": "85e639d947c7551bccb203c111a5c7c30922efa81792c1b1c97b86872dbadbae",
+      "sha256": "7021ceb80f2561eb0933a99a9f8d37245334e799c13f9bff6a305d961a728a9f",
       "bytes": 244600,
       "delivery": "raw-only",
       "kv_key": "auction_weapons_riven_json"
     },
     "auction-attrs-riven": {
       "path": "data/item/auction-dicts/auction-attrs-riven.json",
-      "sha256": "b0a6954bb1a6904ce914d5b7027935e8c1ea448821cba7430dbdd7440f2c3eb5",
+      "sha256": "4218b3bad0fc7bfa662ba5c91efa85010dd4bfe8d1c31b6f08c2ebcbc4d8aff0",
       "bytes": 21429,
       "delivery": "raw-only",
       "kv_key": "auction_attrs_riven_json"
     },
     "auction-weapons-lich": {
       "path": "data/item/auction-dicts/auction-weapons-lich.json",
-      "sha256": "a3b8df03a9887b8de92599091c698e7986f74cd630ce336fa99a4923c0f9657c",
+      "sha256": "81600a5f37a92cf0497a91a8aa2a4754455814f44531e893032bad7eda7c835c",
       "bytes": 11923,
       "delivery": "raw-only",
       "kv_key": "auction_weapons_lich_json"
     },
     "auction-weapons-sister": {
       "path": "data/item/auction-dicts/auction-weapons-sister.json",
-      "sha256": "fb04cad4dd50f09b94d7cc69e94416db0938cbcd526febb52bee35193cacebfb",
+      "sha256": "f03831ce8e7e64f3620c549770b5dd42e9f1c2091a2efdfc1bd5efb50bb4c1f5",
       "bytes": 7742,
       "delivery": "raw-only",
       "kv_key": "auction_weapons_sister_json"
@@ -95,5 +95,5 @@
       "kv_key": "manifest_json"
     }
   },
-  "release_id": "d6e226dd60ef42a28c540d9da6166f58a78e8147"
+  "release_id": "6c2dc00070a1f2cbef42b43a18b6680ee3e28ee5"
 }
